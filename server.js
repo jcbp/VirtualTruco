@@ -1,6 +1,6 @@
-
 /*
  * Utils
+ * 
  */
 var copyObject = function (obj, obj2) {
 	for(var i in obj2) {
