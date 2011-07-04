@@ -32,8 +32,6 @@ var Server = new function () {
 			return value + " of " + suit;
 		}
 	};
-	// Nota: esto por si alguno se quiere hacer el vivo
-	Card.prototype.constructor = null;
 	
 	/*
 	 * random testeado de que sea plano
@@ -94,7 +92,6 @@ var Server = new function () {
 		this.name = name;
 		this.type = type;
 	};
-	Message.prototype.constructor = null;
 	
 	/*
 	 * Tipos de mensaje
@@ -107,7 +104,6 @@ var Server = new function () {
 	
 	/*
 	 * Enumeración de mensajes
-	 * Nota: se recomienda al jugador hace una copia de este objeto por si el contrincante intenta hackear este objeto
 	 */
 	var Messages = this.Messages = {
 		Envido: new Message("Envido", MessageType.Challenge),
@@ -223,13 +219,13 @@ var Server = new function () {
 	 * Tipos de acciones...
 	 */
 	var ActionType = this.ActionType = {
-		PostFirstPartChallenge: {},
-		PostSecondPartChallenge: {},
-		ReplyChallenge: {},
-		ClimbBet: {},
-		PlayCard: {},
-		PostResign: {},
-		PostScore: {}
+		PostFirstPartChallenge: "PostFirstPartChallenge",
+		PostSecondPartChallenge: "PostSecondPartChallenge",
+		ReplyChallenge: "ReplyChallenge",
+		ClimbBet: "ClimbBet",
+		PlayCard: "PlayCard",
+		PostResign: "PostResign",
+		PostScore: "PostScore"
 	};
 	
 	/*
@@ -250,7 +246,7 @@ var Server = new function () {
 	/*
 	 * Comienzo del flujo del juego
 	 */
-	var StartGameFlow = function (playerManager) {
+	var StartGameState = function (playerManager) {
  		this.executeAction = function (action) {
  			var nextState = null;
  			var player;
@@ -258,13 +254,13 @@ var Server = new function () {
  				case ActionType.PostFirstPartChallenge:
  					if(ChallenageHierarchy[action.message.name]) {
 		 				player = playerManager.switchPlayer();
-						nextState = new FirstPartChallengeReceived(playerManager, ChallenageHierarchy[action.message.name]);
+						nextState = new FirstPartReplyChallengeState(playerManager, ChallenageHierarchy[action.message.name]);
 					}
  					break;
  				case ActionType.PostSecondPartChallenge:
  					if(ChallenageHierarchy[action.message.name]) {
  						player = playerManager.switchPlayer();
-						nextState = new SecondPartChallengeReceived(playerManager, ChallenageHierarchy[action.message.name]);
+						nextState = new SecondPartReplyChallengeState(playerManager, ChallenageHierarchy[action.message.name]);
  					}
  					break;
  				case ActionType.PlayCard:
@@ -277,7 +273,7 @@ var Server = new function () {
 	/*
 	 * FirstPart: envido, real envido, etc...
 	 */
-	var FirstPartChallengeReceived = function (playerManager, challenage) {
+	var FirstPartReplyChallengeState = function (playerManager, challenage) {
 		this.executeAction = function (action) {
 			var nextState = null;
 			var player;
@@ -290,13 +286,13 @@ var Server = new function () {
  					else if(action.message==Messages.NoQuiero) {
  						player = playerManager.switchPlayer();
  						player.addScore(challenage.declinedValue);
-						nextState = new StartTrucoState(playerManager);
+						nextState = new PostScoreState(playerManager);
  					}
  					break;
  				case ActionType.ClimbBet:
  					if(challenage[action.message.name]) {
 	 					player = playerManager.switchPlayer();
-						nextState = new FirstPartChallengeReceived(playerManager, challenage[action.message.name]);
+						nextState = new FirstPartReplyChallengeState(playerManager, challenage[action.message.name]);
 					}
  					break;
  			}
@@ -307,7 +303,7 @@ var Server = new function () {
 	/*
 	 * SecondPart: truco, re truco, etc...
 	 */
-	var SecondPartChallengeReceived = function (playerManager, challenage) {
+	var SecondPartReplyChallengeState = function (playerManager, challenage) {
 		this.executeAction = function (action) {
 			var nextState = null;
 			var player;
@@ -323,13 +319,13 @@ var Server = new function () {
  				// case ActionType.PostFirstPartChallenge:
  					// if(ChallenageHierarchy[action.message.name]) {
 		 				// player = playerManager.switchPlayer();
-						// nextState = new FirstPartChallengeReceived(playerManager, ChallenageHierarchy[action.message.name]);
+						// nextState = new FirstPartReplyChallengeState(playerManager, ChallenageHierarchy[action.message.name]);
 					// }
  					// break;
  				case ActionType.ClimbBet:
  					if(challenage[action.message.name]) {
 	 					player = playerManager.switchPlayer();
-						nextState = new SecondPartChallengeReceived(playerManager, challenage[action.message.name]);
+						nextState = new SecondPartReplyChallengeState(playerManager, challenage[action.message.name]);
 					}
  					break;
  			}
@@ -340,7 +336,7 @@ var Server = new function () {
 	/*
 	 * Estado: "cantar el tanto"
 	 */
-	var PostScore = function (playerManager, challenage, envidoScore) {
+	var PostScoreState = function (playerManager, challenage, envidoScore) {
 		var getEnvidoWinner = function (pl1, pl2) {
 			var _winner = pl1.isHand? pl1: pl2;
 			if(pl1.score>pl2.score)
@@ -355,19 +351,19 @@ var Server = new function () {
 			var player;
  			switch(action.type) {
  				case ActionType.PostScore:
- 					if(envidoScore) {
+ 					if(!envidoScore) {
 			 			player = playerManager.switchPlayer();
-			 			nextState = new PostScore(playerManager, challenage, action.envidoScore);
+			 			nextState = new PostScoreState(playerManager, challenage, action.envidoScore);
  					}
  					else {
  						getEnvidoWinner({
- 							player: player,
+ 							player: playerManager.getCurrentPlayer(),
  							score: envidoScore
  						}, {
  							player: player = playerManager.nextCardPlayer(),
  							score: action.envidoScore
  						}).addScore(challenage.acceptedValue);
- 						nextState = new StartTrucoState(playerManager);
+ 						nextState = new PlayCardState(playerManager);
  					}
  					break;
  			}
@@ -375,14 +371,14 @@ var Server = new function () {
 		}
 	}
 	
-	var PlayCard = function (playerManager, challenage) {
+	var PlayCardState = function (playerManager, challenage) {
 		this.executeAction = function (action) {
 			var nextState = null;
 			var player;
  			switch(action.type) {
  				case ActionType.PlayCard:
  					player = playerManager.switchPlayer();
- 					
+ 					nextState = new PlayCardState(playerManager);
  					break;
  				case ActionType.PostSecondPartChallenge:
  					
@@ -391,22 +387,61 @@ var Server = new function () {
 			return nextState;
 		}
 	}
+	
+	var Log = new function () {
+		var _output = document.createElement("div");
+		document.body.appendChild(_output);
+		_output.style.fontFamily = "Courier New";
+		_output.style.fontSize = "12px";
+		var addColumn = function (str) {
+			var len = 28 - (str+'').length;
+			var pipePos = 23 - (str+'').length;
+			for (var i=0; i < len; i++) {
+				str += "&nbsp;";
+				if(i==pipePos)
+					str += "|";
+			};
+			return str;
+		}
+		this.add = function (line) {
+			var str = "";
+			for(var i in line) {
+				str += i + ": " + addColumn(line[i]);
+			}
+			_output.innerHTML += str + "<br>";
+		}
+	}
 
-	var Context = function (playerManager) {
-		var _state = new StartGameFlow(playerManager);
+	var TableContext = function (playerManager) {
+		var _state = new StartGameState(playerManager);
+		var _actions = [];
 		this.play = function (action) {
+			
+			Log.add({
+				player: playerManager.getCurrentPlayer().handler.name,
+				type: action.type,
+				message: action.message? action.message.name: null,
+				card: action.card,
+				score: action.envidoScore
+			});
+			
+			_actions.push(action);
 			return _state = _state.executeAction(action);
+		}
+		this.getGameDataSet = function () {
+			return new GameDataSet(_actions);
 		}
 	}
 	
 	/*
 	 * Objeto que representa el estado del juego como un conjunto de datos
 	 */
-	var GameDataSet = function () {
+	var GameDataSet = function (actions) {
 		this.totalCardsPlayed = [];
 		this.opponentCardsPlayed = [];
 		this.cardsOwnPlayed = [];
 		this.errorMessage = null;
+		this.stackMoves = copyArray(actions);
 	}
 
 	/*
@@ -428,12 +463,14 @@ var Server = new function () {
 			_player1.initGameSet(_deck.takeCard(3));
 			_player2.initGameSet(_deck.takeCard(3));
 			var _playerManager = new PlayerManager(_player1, _player2);
-			var _context = new Context(_playerManager);
+			var _context = new TableContext(_playerManager);
 			
-			var state = true;
-			while(state) {
-				state = _context.play(_playerManager.getCurrentPlayer().handler.play());
+			var state, action;
+			do {
+				action = _playerManager.getCurrentPlayer().handler.play(_context.getGameDataSet());
+				state = _context.play(action);
 			}
+			while(state);
 		}
 	}
 }
