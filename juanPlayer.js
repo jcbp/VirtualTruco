@@ -11,7 +11,10 @@ var Player2 = function () {
 	}
 	
 	var i = 0;
-	this.play = function (gameDataSet) {
+
+	this.play = function (moves) {
+		var gameDataSet = new PlayerAPI.GameDataSet(moves);
+		
 		i++;
 		var action;
 		switch(i) {

@@ -411,10 +411,18 @@ var Server = new function () {
 			_output.innerHTML += str + "<br>";
 		}
 	}
+	
+	/*
+	 * Conjunto de jugadas asociadas a un jugador (playerName)
+	 */
+	var Moves = function (playerName, action) {
+		this.playerName = playerName;
+		this.action = action;
+	}
 
 	var TableContext = function (playerManager) {
 		var _state = new StartGameState(playerManager);
-		var _actions = [];
+		var _moves = [];
 		this.play = function (action) {
 			
 			Log.add({
@@ -425,23 +433,12 @@ var Server = new function () {
 				score: action.envidoScore
 			});
 			
-			_actions.push(action);
+			_moves.push(new Moves(playerManager.getCurrentPlayer().handler.name, action));
 			return _state = _state.executeAction(action);
 		}
-		this.getGameDataSet = function () {
-			return new GameDataSet(_actions);
+		this.getMoves = function () {
+			return copyArray(_moves);
 		}
-	}
-	
-	/*
-	 * Objeto que representa el estado del juego como un conjunto de datos
-	 */
-	var GameDataSet = function (actions) {
-		this.totalCardsPlayed = [];
-		this.opponentCardsPlayed = [];
-		this.cardsOwnPlayed = [];
-		this.errorMessage = null;
-		this.stackMoves = copyArray(actions);
 	}
 
 	/*
@@ -467,7 +464,7 @@ var Server = new function () {
 			
 			var state, action;
 			do {
-				action = _playerManager.getCurrentPlayer().handler.play(_context.getGameDataSet());
+				action = _playerManager.getCurrentPlayer().handler.play(_context.getMoves());
 				state = _context.play(action);
 			}
 			while(state);

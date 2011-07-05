@@ -11,7 +11,7 @@ var Player1 = function () {
 	}
 	
 	var i = 0;
-	this.play = function (gameDataSet) {
+	this.play = function (moves) {
 		i++;
 		var action;
 		switch(i) {
