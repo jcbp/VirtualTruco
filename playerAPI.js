@@ -9,9 +9,11 @@ var Utils = function () {
 /*
  * API
  */
+
+
 var PlayerAPI = new function () {
 	
-	this.ChallengeFactory = new function () {
+	this.ChallengeFactory = function () {
 		this.createEnvido = function () {
 			return new Server.Action(Server.ActionType.PostFirstPartChallenge, Server.Messages.Envido);
 		}

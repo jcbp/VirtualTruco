@@ -11,12 +11,13 @@ var Player1 = function () {
 	}
 	
 	var i = 0;
+	var Challenges = new PlayerAPI.ChallengeFactory();
 	this.play = function (moves) {
 		i++;
 		var action;
 		switch(i) {
 			case 1:
-				action = new Server.Action(Server.ActionType.PostFirstPartChallenge, Server.Messages.Envido); 
+				action = Challenges.createEnvido(); 
 				break;
 			case 2:
 				action = new Server.Action(Server.ActionType.ReplyChallenge, Server.Messages.Quiero); 
