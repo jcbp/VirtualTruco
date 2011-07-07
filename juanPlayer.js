@@ -3,11 +3,18 @@
  */
 var Player2 = function () {
 	var _cardSet = [];
+	var _utils = new Utils();
 	
 	this.name = "Juan";
 
-	this.initGameSet = function (cards) {
-		_cardSet = cards;
+	this.initHand = function (cardSet) {
+		_cardSet = cardSet;
+	}
+	this.endHand = function () {
+
+	}
+	this.setScorePoints = function (scorePoints) {
+		_scorePoints = scorePoints;
 	}
 	
 	var i = 0;
@@ -16,20 +23,25 @@ var Player2 = function () {
 		
 		i++;
 		var action;
+
 		switch(i) {
 			case 1:
 				action = CommonAPI.ActionFactory.createEnvido();
 				break;
 			case 2:
+				action = CommonAPI.ActionFactory.createQuiero();
+				break;
+			case 3:
 				action = CommonAPI.ActionFactory.createPostScore(28); 
 				break;
-			case 4:
-				action = CommonAPI.ActionFactory.createTruco(); 
+			case 5:
+				action = CommonAPI.ActionFactory.createTruco();
 				break;
 			default:
 				action = CommonAPI.ActionFactory.createPlayCard(_cardSet.pop());
 				break;
 		}
+		
 		return action;
 	}
 }

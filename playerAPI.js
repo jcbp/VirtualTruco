@@ -5,6 +5,9 @@ var Utils = function () {
 	this.getLastElement = function (elements) {
 		return elements[elements.length - 1];
 	}
+	this.random = function (from, to) {
+		return Math.floor(Math.random() * (to - from + 1)) + from;
+	}
 }
 /*
  * API
@@ -23,6 +26,9 @@ var CommonAPI = new function () {
 		}
 		this.createQuiero = function () {
 			return new Server.Action(Server.ActionType.ReplyChallenge, Server.Messages.Quiero);
+		}
+		this.createNoQuiero = function () {
+			return new Server.Action(Server.ActionType.ReplyChallenge, Server.Messages.NoQuiero);
 		}
 		this.createPostScore = function (score) {
 			return new Server.Action(Server.ActionType.PostScore, score);

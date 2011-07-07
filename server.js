@@ -181,6 +181,33 @@ var Server = new function () {
 	}
 	
 	/*
+	 * Manejador de apuestas
+	 */
+	var BetManager = function () {
+		var _firstSection = BetHierarchy;
+		var _secondSection = BetHierarchy;
+		this.firstSectionIncreseBet = function (bet) {
+			return _firstSection = _firstSection[bet] || null;
+		}
+		this.secondSectionIncreseBet = function (bet) {
+			return _secondSection = _secondSection[bet] || null;
+		}
+		this.getFirstSectionBet = function () {
+			return _firstSection;
+		}
+		this.getSecondSectionBet = function () {
+			return _secondSection;
+		}
+		this.closeFirstSection = function () {
+			_firstSection = {};
+		}
+		this.closeSecondSection = function () {
+			_firstSection = {};
+		}
+	}
+	
+	
+	/*
 	 * Agrupa los datos relevantes de cada jugador
 	 */
 	var PlayerProfile = function (handler, isHand) {
@@ -213,13 +240,13 @@ var Server = new function () {
 			return _currentPlayer = _player1;
 		}
 		this.nextCardPlayer = function () {
-			_currentPlayer = _player1.playedCards.length > _player2.playedCards.length? _player2: _player1;
+			return _currentPlayer = _player1.playedCards.length > _player2.playedCards.length? _player2: _player1;
 		}
 		this.getCurrentPlayer = function () {
 			return _currentPlayer;
 		}
 	}
-	
+
 	/*
 	 * Tipos de acciones...
 	 */
@@ -253,26 +280,27 @@ var Server = new function () {
 	 * Comienzo del flujo del juego
 	 */
 	var StartGameState = function (playerManager) {
- 		this.executeAction = function (action) {
+ 		this.executeAction = function (action, betManager) {
  			var nextState = null;
  			var player;
  			switch(action.type) {
  				case ActionType.PostFirstSectionChallenge:
- 					if(BetHierarchy[action.message.name]) {
+ 					if(betManager.firstSectionIncreseBet(action.message.name)) {
 		 				player = playerManager.switchPlayer();
-						nextState = new FirstPartReplyChallengeState(playerManager, BetHierarchy[action.message.name]);
+						nextState = new FirstSectionReplyChallengeState(playerManager);
 					}
  					break;
  				case ActionType.PostSecondSectionChallenge:
- 					if(BetHierarchy[action.message.name]) {
+ 					if(betManager.secondSectionIncreseBet(action.message.name)) {
  						player = playerManager.switchPlayer();
-						nextState = new SecondPartReplyChallengeState(playerManager, BetHierarchy[action.message.name]);
+						nextState = new SecondSectionReplyChallengeState(playerManager);
  					}
  					break;
  				case ActionType.PlayCard:
- 					
- 					// ...
- 					
+ 					if(action.card) {
+	 					player = playerManager.switchPlayer();
+	 					nextState = new PlayCardState(playerManager);
+	 				}
  					break;
  			}
 			return nextState;
@@ -280,28 +308,29 @@ var Server = new function () {
 	}
 	
 	/*
-	 * FirstPart: envido, real envido, etc...
+	 * FirstSection: envido, real envido, etc...
 	 */
-	var FirstPartReplyChallengeState = function (playerManager, challenge) {
-		this.executeAction = function (action) {
+	var FirstSectionReplyChallengeState = function (playerManager) {
+		this.executeAction = function (action, betManager) {
 			var nextState = null;
 			var player;
  			switch(action.type) {
  				case ActionType.ReplyChallenge:
  					if(action.message==Messages.Quiero) {
  						player = playerManager.getHandPlayer();
- 						nextState = new PostScoreState(playerManager, challenge);
+ 						nextState = new PostScoreState(playerManager);
  					}
  					else if(action.message==Messages.NoQuiero) {
  						player = playerManager.switchPlayer();
- 						player.addScorePoints(challenge.declinedValue);
-						nextState = new PostScoreState(playerManager);
+ 						player.addScorePoints(betManager.getFirstSectionBet().declinedValue);
+						nextState = new PlayCardState(playerManager);
  					}
+ 					betManager.closeFirstSection();
  					break;
  				case ActionType.PostFirstSectionChallenge:
- 					if(challenge[action.message.name]) {
-	 					player = playerManager.switchPlayer();
-						nextState = new FirstPartReplyChallengeState(playerManager, challenge[action.message.name]);
+					if(betManager.firstSectionIncreseBet(action.message.name)) {
+		 				player = playerManager.switchPlayer();
+						nextState = new FirstSectionReplyChallengeState(playerManager);
 					}
  					break;
  			}
@@ -310,42 +339,42 @@ var Server = new function () {
 	}
 	
 	/*
-	 * SecondPart: truco, re truco, etc...
+	 * SecondSection: truco, re truco, etc...
 	 */
-	var SecondPartReplyChallengeState = function (playerManager, challenge) {
-		this.executeAction = function (action) {
+	var SecondSectionReplyChallengeState = function (playerManager) {
+		this.executeAction = function (action, betManager) {
 			var nextState = null;
 			var player;
  			switch(action.type) {
  				case ActionType.ReplyChallenge:
  					if(action.message==Messages.Quiero) {
- 					
+	 					player = playerManager.switchPlayer();
+	 					nextState = new PlayCardState(playerManager);
  					}
  					else if(action.message==Messages.NoQuiero) {
- 					
+ 						nextState = new SuccessfulConclusionState(playerManager);
  					}
  					break;
- 				// case ActionType.PostFirstSectionChallenge:
- 					// if(BetHierarchy[action.message.name]) {
-		 				// player = playerManager.switchPlayer();
-						// nextState = new FirstPartReplyChallengeState(playerManager, BetHierarchy[action.message.name]);
-					// }
- 					// break;
- 				case ActionType.PostSecondSectionChallenge:
- 					if(challenge[action.message.name]) {
-	 					player = playerManager.switchPlayer();
-						nextState = new SecondPartReplyChallengeState(playerManager, challenge[action.message.name]);
+ 				case ActionType.PostFirstSectionChallenge:
+					if(betManager.firstSectionIncreseBet(action.message.name)) {
+		 				player = playerManager.switchPlayer();
+						nextState = new FirstSectionReplyChallengeState(playerManager);
 					}
+ 				case ActionType.PostSecondSectionChallenge:
+					if(betManager.secondSectionIncreseBet(action.message.name)) {
+ 						player = playerManager.switchPlayer();
+						nextState = new SecondSectionReplyChallengeState(playerManager);
+ 					}
  					break;
  			}
 			return nextState;
 		}
 	}
-	
+
 	/*
 	 * Estado: "cantar el tanto"
 	 */
-	var PostScoreState = function (playerManager, challenge, envidoScore) {
+	var PostScoreState = function (playerManager, envidoScore) {
 		var getEnvidoWinner = function (pl1, pl2) {
 			var _winner = pl1.isHand? pl1: pl2;
 			if(pl1.score>pl2.score)
@@ -355,14 +384,14 @@ var Server = new function () {
 			}
 			return _winner.player;
 		}
-		this.executeAction = function (action) {
+		this.executeAction = function (action, betManager) {
 			var nextState = null;
 			var player;
  			switch(action.type) {
  				case ActionType.PostScore:
  					if(!envidoScore) {
 			 			player = playerManager.switchPlayer();
-			 			nextState = new PostScoreState(playerManager, challenge, action.envidoScore);
+			 			nextState = new PostScoreState(playerManager, action.envidoScore);
  					}
  					else {
  						getEnvidoWinner({
@@ -371,7 +400,7 @@ var Server = new function () {
  						}, {
  							player: player = playerManager.nextCardPlayer(),
  							score: action.envidoScore
- 						}).addScorePoints(challenge.acceptedValue);
+ 						}).addScorePoints(betManager.getFirstSectionBet().acceptedValue);
  						nextState = new PlayCardState(playerManager);
  					}
  					break;
@@ -380,20 +409,38 @@ var Server = new function () {
 		}
 	}
 	
-	var PlayCardState = function (playerManager, challenge) {
-		this.executeAction = function (action) {
+	var PlayCardState = function (playerManager) {
+		this.executeAction = function (action, betManager) {
 			var nextState = null;
 			var player;
  			switch(action.type) {
  				case ActionType.PlayCard:
- 					player = playerManager.switchPlayer();
- 					nextState = new PlayCardState(playerManager);
+ 					if(action.card) {
+	 					player = playerManager.switchPlayer();
+	 					nextState = new PlayCardState(playerManager);
+	 				}
+ 					break;
+ 				case ActionType.PostFirstSectionChallenge:
+ 					if(betManager.firstSectionIncreseBet(action.message.name)) {
+		 				player = playerManager.switchPlayer();
+						nextState = new FirstSectionReplyChallengeState(playerManager);
+					}
  					break;
  				case ActionType.PostSecondSectionChallenge:
- 					
+ 					if(betManager.secondSectionIncreseBet(action.message.name)) {
+ 						player = playerManager.switchPlayer();
+						nextState = new SecondSectionReplyChallengeState(playerManager);
+ 					}
  					break;
  			}
 			return nextState;
+		}
+	}
+	
+	var SuccessfulConclusionState = function (playerManager) {
+		this.executeAction = function (action, betManager) {
+			Log.add({Separator: "-----------------------------------------------------------------------------------------"});
+			return new StartGameState(playerManager);
 		}
 	}
 	
@@ -424,12 +471,13 @@ var Server = new function () {
 	/*
 	 * Conjunto de jugadas asociadas a un jugador (playerName)
 	 */
-	var Moves = function (playerName, action) {
+	var Move = function (playerName, action) {
 		this.playerName = playerName;
 		this.action = action;
 	}
 
 	var TableContext = function (playerManager) {
+		var _betManager = new BetManager();
 		var _state = new StartGameState(playerManager);
 		var _moves = [];
 		this.play = function (action) {
@@ -442,8 +490,8 @@ var Server = new function () {
 				score: action.envidoScore
 			});
 			
-			_moves.push(new Moves(playerManager.getCurrentPlayer().handler.name, action));
-			return _state = _state.executeAction(action);
+			_moves.push(new Move(playerManager.getCurrentPlayer().handler.name, action));
+			return _state = _state.executeAction(action, _betManager);
 		}
 		this.getMoves = function () {
 			return copyArray(_moves);
@@ -460,8 +508,8 @@ var Server = new function () {
 		
 		var dealCards = function () {
 			_deck.shuffle();
-			_player1.initGameSet(_deck.takeCard(3));
-			_player2.initGameSet(_deck.takeCard(3));
+			_player1.initHand(_deck.takeCard(3));
+			_player2.initHand(_deck.takeCard(3));
 		}
 		
 		this.setPlayer1 = function (player) {
@@ -476,11 +524,12 @@ var Server = new function () {
 			var _context = new TableContext(_playerManager);
 			
 			var state, action;
-			do {
+			var interval = setInterval(function() {
 				action = _playerManager.getCurrentPlayer().handler.play(_context.getMoves());
 				state = _context.play(action);
-			}
-			while(state);
+				if(!state)
+					clearInterval(interval);
+			}, 10);
 		}
 	}
 }
