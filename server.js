@@ -22,12 +22,16 @@ var copyArray = function (array) {
  */
 var Server = new function () {
 	
+
+
 	/*
 	 * Define lo que es una carta, a partir del valor y el palo
 	 */
-	var Card = function (value, suit) {
+
+	var Card = function (value, suit, data) {
 		this.value = value;
 		this.suit = suit;
+        this.data = data || value;
 		this.toString = function () {
 			return value + " of " + suit;
 		}
@@ -56,13 +60,20 @@ var Server = new function () {
 	/*
 	 * Maso de cartas
 	 */
-	var Deck = function (values, suits, shuffler) {
+	var Deck = function (suits, shuffler) {
 		var _cards = [];
 		
 		var init = function () {
-			for (var i=0; i < values.length; i++) {
-				for (var j=0; j < suits.length; j++) {
-					_cards.push(new Card(values[i], suits[j]));
+			var card;
+			var deck;
+			var cards;			
+			
+			for (var i = 0; i < suits.length; i++) {
+				deck  = suits[i];
+				cards = deck.cards;
+				for (var j = 0; j < cards.length; j++) {
+					card = cards[j];					
+					_cards.push(new Card(card.rank, deck.suit,card.data));
 				};
 			};
 		}
@@ -80,9 +91,12 @@ var Server = new function () {
 	}
 	
 	var SpanishDeck = function (shuffler) {
-		var _deckValues = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
-		var _deckSuits = ["Cup", "Coin", "Club", "Sword"];
-		Deck.call(this, _deckValues, _deckSuits, shuffler);
+		var _deckSuits = [
+		{suit:"cup",  cards:[{rank:1,data:14},{rank:2,data:15},{rank:3,data:16},{rank:4},{rank:5},{rank:6},{rank:7},		 {rank:10},{rank:11},{rank:12}]},
+		{suit:"Coin", cards:[{rank:1,data:14},{rank:2,data:15},{rank:3,data:16},{rank:4},{rank:5},{rank:6},{rank:7,data:20},{rank:10},{rank:11},{rank:12}]},
+		{suit:"Club", cards:[{rank:1,data:40},{rank:2,data:15},{rank:3,data:16},{rank:4},{rank:5},{rank:6},{rank:7},		 {rank:10},{rank:11},{rank:12}]},
+		{suit:"Sword",cards:[{rank:1,data:50},{rank:2,data:15},{rank:3,data:16},{rank:4},{rank:5},{rank:6},{rank:7,data:30},{rank:10},{rank:11},{rank:12}]}]
+		Deck.call(this, _deckSuits, shuffler);
 	}
 	
 	/*
@@ -475,4 +489,3 @@ var Server = new function () {
 Server.GameManager.setPlayer1(new Player1());
 Server.GameManager.setPlayer2(new Player2());
 Server.GameManager.start();
-
