@@ -79,7 +79,10 @@ var Server = new function () {
 		}
 	}
 	
-	var SpanishDeck = function (shuffler) {
+	/*
+	 * Se define el mazo de cartas españolas
+	 */
+	var LatinSuitedCard = function (shuffler) {
 		var _deckValues = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
 		var _deckSuits = ["Cup", "Coin", "Club", "Sword"];
 		Deck.call(this, _deckValues, _deckSuits, shuffler);
@@ -99,7 +102,7 @@ var Server = new function () {
 	var MessageType = this.MessageType = {
 		Challenge: "Challenge",
 		Reply: "Reply",
-		Resign: "Resign"
+		Surrender: "Surrender"
 	};
 	
 	/*
@@ -114,54 +117,54 @@ var Server = new function () {
 		ValeCuatro: new Message("ValeCuatro", MessageType.Challenge),
 		Quiero: new Message("Quiero", MessageType.Reply),
 		NoQuiero: new Message("NoQuiero", MessageType.Reply),
-		SonBuenas: new Message("SonBuenas", MessageType.Resign)
+		SonBuenas: new Message("SonBuenas", MessageType.Surrender)
 	};
 	
 	/*
 	 * Define las relaciones para subir la apuesta, con sus respectivos valores acumulados por combinacion (queridos y no-queridos)
 	 */
-	var EnvidoChallenage = function (previousValue) {
+	var EnvidoBet = function (previousValue) {
 		this.intrinsicValue = 2;
 		this.acceptedValue = previousValue + this.intrinsicValue;
 		this.declinedValue = previousValue || 1;
 		
 		if(previousValue==0)
-			this.Envido = new EnvidoChallenage(this.acceptedValue);
-		this.RealEnvido = new RealEnvidoChallenage(this.acceptedValue);
-		this.FaltaEnvido = new FaltaEnvidoChallenage(this.acceptedValue);
+			this.Envido = new EnvidoBet(this.acceptedValue);
+		this.RealEnvido = new RealEnvidoBet(this.acceptedValue);
+		this.FaltaEnvido = new FaltaEnvidoBet(this.acceptedValue);
 	}
 	
-	var RealEnvidoChallenage = function (previousValue) {
+	var RealEnvidoBet = function (previousValue) {
 		this.intrinsicValue = 3;
 		this.acceptedValue = previousValue + this.intrinsicValue;
 		this.declinedValue = previousValue || 1;
 		
-		this.FaltaEnvido = new FaltaEnvidoChallenage(this.acceptedValue);
+		this.FaltaEnvido = new FaltaEnvidoBet(this.acceptedValue);
 	}
 	
-	var FaltaEnvidoChallenage = function (previousValue) {
+	var FaltaEnvidoBet = function (previousValue) {
 		this.intrinsicValue = 3;
 		this.acceptedValue = previousValue + this.intrinsicValue;
 		this.declinedValue = previousValue || 1;
 	}
 	
-	var TrucoChallenage = function (previousValue) {
+	var TrucoBet = function (previousValue) {
 		this.intrinsicValue = 2;
 		this.acceptedValue = previousValue + this.intrinsicValue;
 		this.declinedValue = previousValue || 1;
 		
-		this.ReTruco = new ReTrucoChallenage(this.acceptedValue);
+		this.ReTruco = new ReTrucoBet(this.acceptedValue);
 	}
 	
-	var ReTrucoChallenage = function (previousValue) {
+	var ReTrucoBet = function (previousValue) {
 		this.intrinsicValue = 1;
 		this.acceptedValue = previousValue + this.intrinsicValue;
 		this.declinedValue = previousValue || 1;
 		
-		this.ValeCuatro = new ValeCuatroChallenage(this.acceptedValue);
+		this.ValeCuatro = new ValeCuatroBet(this.acceptedValue);
 	}
 	
-	var ValeCuatroChallenage = function (previousValue) {
+	var ValeCuatroBet = function (previousValue) {
 		this.intrinsicValue = 1;
 		this.acceptedValue = previousValue + this.intrinsicValue;
 		this.declinedValue = previousValue || 1;
@@ -170,21 +173,23 @@ var Server = new function () {
 	/*
 	 * Es el nodo raiz de las relaciones jerarquicas definidas anteriormente
 	 */
-	var ChallenageHierarchy = {
-		Envido: new EnvidoChallenage(0),
-		RealEnvido: new RealEnvidoChallenage(0),
-		FaltaEnvido: new FaltaEnvidoChallenage(0),
-		Truco: new TrucoChallenage(0)
+	var BetHierarchy = {
+		Envido: new EnvidoBet(0),
+		RealEnvido: new RealEnvidoBet(0),
+		FaltaEnvido: new FaltaEnvidoBet(0),
+		Truco: new TrucoBet(0)
 	}
 	
 	/*
 	 * Agrupa los datos relevantes de cada jugador
 	 */
 	var PlayerProfile = function (handler, isHand) {
-		this.score = 0;
+		this.scorePoints = 0;
 		this.isHand = isHand;
-		this.addScore = function (value) {
-			this.score += value;
+		this.addScorePoints = function (value) {
+			this.scorePoints += value;
+			if(handler.setScorePoints)
+				handler.setScorePoints(this.scorePoints);
 		}
 		this.handler = handler;
 		this.playedCards = [];
@@ -219,13 +224,14 @@ var Server = new function () {
 	 * Tipos de acciones...
 	 */
 	var ActionType = this.ActionType = {
-		PostFirstPartChallenge: "PostFirstPartChallenge",
-		PostSecondPartChallenge: "PostSecondPartChallenge",
+		PostFirstSectionChallenge: "PostFirstSectionChallenge",
+		PostSecondSectionChallenge: "PostSecondSectionChallenge",
 		ReplyChallenge: "ReplyChallenge",
-		ClimbBet: "ClimbBet",
+		//IncreaseChallenge: "IncreaseChallenge", // parece que no hace falta
 		PlayCard: "PlayCard",
-		PostResign: "PostResign",
-		PostScore: "PostScore"
+		PostSurrender: "PostSurrender",
+		PostScore: "PostScore",
+		GoingToDeck: "GoingToDeck"
 	};
 	
 	/*
@@ -233,11 +239,11 @@ var Server = new function () {
 	 */
 	var Action = this.Action = function (type, argument) {
 		this.type = type;
-		this.message =	type==ActionType.PostFirstPartChallenge ||
-						type==ActionType.PostSecondPartChallenge ||
+		this.message =	type==ActionType.PostFirstSectionChallenge ||
+						type==ActionType.PostSecondSectionChallenge ||
 						type==ActionType.ReplyChallenge ||
-						type==ActionType.ClimbBet ||
-						type==ActionType.PostResign
+						// type==ActionType.IncreaseChallenge ||
+						type==ActionType.PostSurrender
 						? argument: null;
 		this.card = type==ActionType.PlayCard? argument: null;
 		this.envidoScore = type==ActionType.PostScore? argument: null;
@@ -251,19 +257,22 @@ var Server = new function () {
  			var nextState = null;
  			var player;
  			switch(action.type) {
- 				case ActionType.PostFirstPartChallenge:
- 					if(ChallenageHierarchy[action.message.name]) {
+ 				case ActionType.PostFirstSectionChallenge:
+ 					if(BetHierarchy[action.message.name]) {
 		 				player = playerManager.switchPlayer();
-						nextState = new FirstPartReplyChallengeState(playerManager, ChallenageHierarchy[action.message.name]);
+						nextState = new FirstPartReplyChallengeState(playerManager, BetHierarchy[action.message.name]);
 					}
  					break;
- 				case ActionType.PostSecondPartChallenge:
- 					if(ChallenageHierarchy[action.message.name]) {
+ 				case ActionType.PostSecondSectionChallenge:
+ 					if(BetHierarchy[action.message.name]) {
  						player = playerManager.switchPlayer();
-						nextState = new SecondPartReplyChallengeState(playerManager, ChallenageHierarchy[action.message.name]);
+						nextState = new SecondPartReplyChallengeState(playerManager, BetHierarchy[action.message.name]);
  					}
  					break;
  				case ActionType.PlayCard:
+ 					
+ 					// ...
+ 					
  					break;
  			}
 			return nextState;
@@ -273,7 +282,7 @@ var Server = new function () {
 	/*
 	 * FirstPart: envido, real envido, etc...
 	 */
-	var FirstPartReplyChallengeState = function (playerManager, challenage) {
+	var FirstPartReplyChallengeState = function (playerManager, challenge) {
 		this.executeAction = function (action) {
 			var nextState = null;
 			var player;
@@ -281,18 +290,18 @@ var Server = new function () {
  				case ActionType.ReplyChallenge:
  					if(action.message==Messages.Quiero) {
  						player = playerManager.getHandPlayer();
- 						nextState = new PostScoreState(playerManager, challenage);
+ 						nextState = new PostScoreState(playerManager, challenge);
  					}
  					else if(action.message==Messages.NoQuiero) {
  						player = playerManager.switchPlayer();
- 						player.addScore(challenage.declinedValue);
+ 						player.addScorePoints(challenge.declinedValue);
 						nextState = new PostScoreState(playerManager);
  					}
  					break;
- 				case ActionType.ClimbBet:
- 					if(challenage[action.message.name]) {
+ 				case ActionType.PostFirstSectionChallenge:
+ 					if(challenge[action.message.name]) {
 	 					player = playerManager.switchPlayer();
-						nextState = new FirstPartReplyChallengeState(playerManager, challenage[action.message.name]);
+						nextState = new FirstPartReplyChallengeState(playerManager, challenge[action.message.name]);
 					}
  					break;
  			}
@@ -303,7 +312,7 @@ var Server = new function () {
 	/*
 	 * SecondPart: truco, re truco, etc...
 	 */
-	var SecondPartReplyChallengeState = function (playerManager, challenage) {
+	var SecondPartReplyChallengeState = function (playerManager, challenge) {
 		this.executeAction = function (action) {
 			var nextState = null;
 			var player;
@@ -316,16 +325,16 @@ var Server = new function () {
  					
  					}
  					break;
- 				// case ActionType.PostFirstPartChallenge:
- 					// if(ChallenageHierarchy[action.message.name]) {
+ 				// case ActionType.PostFirstSectionChallenge:
+ 					// if(BetHierarchy[action.message.name]) {
 		 				// player = playerManager.switchPlayer();
-						// nextState = new FirstPartReplyChallengeState(playerManager, ChallenageHierarchy[action.message.name]);
+						// nextState = new FirstPartReplyChallengeState(playerManager, BetHierarchy[action.message.name]);
 					// }
  					// break;
- 				case ActionType.ClimbBet:
- 					if(challenage[action.message.name]) {
+ 				case ActionType.PostSecondSectionChallenge:
+ 					if(challenge[action.message.name]) {
 	 					player = playerManager.switchPlayer();
-						nextState = new SecondPartReplyChallengeState(playerManager, challenage[action.message.name]);
+						nextState = new SecondPartReplyChallengeState(playerManager, challenge[action.message.name]);
 					}
  					break;
  			}
@@ -336,7 +345,7 @@ var Server = new function () {
 	/*
 	 * Estado: "cantar el tanto"
 	 */
-	var PostScoreState = function (playerManager, challenage, envidoScore) {
+	var PostScoreState = function (playerManager, challenge, envidoScore) {
 		var getEnvidoWinner = function (pl1, pl2) {
 			var _winner = pl1.isHand? pl1: pl2;
 			if(pl1.score>pl2.score)
@@ -353,7 +362,7 @@ var Server = new function () {
  				case ActionType.PostScore:
  					if(!envidoScore) {
 			 			player = playerManager.switchPlayer();
-			 			nextState = new PostScoreState(playerManager, challenage, action.envidoScore);
+			 			nextState = new PostScoreState(playerManager, challenge, action.envidoScore);
  					}
  					else {
  						getEnvidoWinner({
@@ -362,7 +371,7 @@ var Server = new function () {
  						}, {
  							player: player = playerManager.nextCardPlayer(),
  							score: action.envidoScore
- 						}).addScore(challenage.acceptedValue);
+ 						}).addScorePoints(challenge.acceptedValue);
  						nextState = new PlayCardState(playerManager);
  					}
  					break;
@@ -371,7 +380,7 @@ var Server = new function () {
 		}
 	}
 	
-	var PlayCardState = function (playerManager, challenage) {
+	var PlayCardState = function (playerManager, challenge) {
 		this.executeAction = function (action) {
 			var nextState = null;
 			var player;
@@ -380,7 +389,7 @@ var Server = new function () {
  					player = playerManager.switchPlayer();
  					nextState = new PlayCardState(playerManager);
  					break;
- 				case ActionType.PostSecondPartChallenge:
+ 				case ActionType.PostSecondSectionChallenge:
  					
  					break;
  			}
@@ -392,10 +401,10 @@ var Server = new function () {
 		var _output = document.createElement("div");
 		document.body.appendChild(_output);
 		_output.style.fontFamily = "Courier New";
-		_output.style.fontSize = "12px";
+		_output.style.fontSize = "11px";
 		var addColumn = function (str) {
-			var len = 28 - (str+'').length;
-			var pipePos = 23 - (str+'').length;
+			var len = 30 - (str+'').length;
+			var pipePos = 26 - (str+'').length;
 			for (var i=0; i < len; i++) {
 				str += "&nbsp;";
 				if(i==pipePos)
@@ -445,9 +454,15 @@ var Server = new function () {
 	 * Clase principal
 	 */
 	this.GameManager = new function () {
-		var _deck = new SpanishDeck(new DeckShuffler());
+		var _deck = new LatinSuitedCard(new DeckShuffler());
 		var _player1, _player2;
 		var _hand = _player1;
+		
+		var dealCards = function () {
+			_deck.shuffle();
+			_player1.initGameSet(_deck.takeCard(3));
+			_player2.initGameSet(_deck.takeCard(3));
+		}
 		
 		this.setPlayer1 = function (player) {
 			_player1 = player;
@@ -456,9 +471,7 @@ var Server = new function () {
 			_player2 = player;
 		}
 		this.start = function () {
-			_deck.shuffle();
-			_player1.initGameSet(_deck.takeCard(3));
-			_player2.initGameSet(_deck.takeCard(3));
+			dealCards();
 			var _playerManager = new PlayerManager(_player1, _player2);
 			var _context = new TableContext(_playerManager);
 			

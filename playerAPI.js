@@ -9,18 +9,28 @@ var Utils = function () {
 /*
  * API
  */
-var PlayerAPI = new function () {
+var CommonAPI = new function () {
 	
-	this.ChallengeFactory = new function () {
+	this.ActionFactory = new function () {
 		this.createEnvido = function () {
-			return new Server.Action(Server.ActionType.PostFirstPartChallenge, Server.Messages.Envido);
+			return new Server.Action(Server.ActionType.PostFirstSectionChallenge, Server.Messages.Envido);
 		}
 		this.createRealEnvido = function () {
-			return new Server.Action(Server.ActionType.PostFirstPartChallenge, Server.Messages.RealEnvido);
+			return new Server.Action(Server.ActionType.PostFirstSectionChallenge, Server.Messages.RealEnvido);
 		}
 		this.createTruco = function () {
-			return new Server.Action(Server.ActionType.PostSecondPartChallenge, Server.Messages.Truco);
+			return new Server.Action(Server.ActionType.PostSecondSectionChallenge, Server.Messages.Truco);
 		}
+		this.createQuiero = function () {
+			return new Server.Action(Server.ActionType.ReplyChallenge, Server.Messages.Quiero);
+		}
+		this.createPostScore = function (score) {
+			return new Server.Action(Server.ActionType.PostScore, score);
+		}
+		this.createPlayCard = function (card) {
+			return new Server.Action(Server.ActionType.PlayCard, card);
+		}
+		// ... agregar los metodos de las acciones restantes
 	}
 	
 	this.GameDataSet = function (moves) {
@@ -41,7 +51,7 @@ var PlayerAPI = new function () {
 		}
 	}
 	
-	this.CardManager = function (cards) {
+	this.CardPacketManager = function (cards) {
 		// el mas alto
 		this.calculateEnvido = function () {
 			

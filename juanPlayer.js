@@ -2,33 +2,32 @@
  * IA of Juan
  */
 var Player2 = function () {
-	var _cards = null;
+	var _cardSet = [];
 	
 	this.name = "Juan";
 
 	this.initGameSet = function (cards) {
-		_cards = cards;
+		_cardSet = cards;
 	}
 	
 	var i = 0;
 
 	this.play = function (moves) {
-		var gameDataSet = new PlayerAPI.GameDataSet(moves);
 		
 		i++;
 		var action;
 		switch(i) {
 			case 1:
-				action = new Server.Action(Server.ActionType.ClimbBet, Server.Messages.Envido);
+				action = CommonAPI.ActionFactory.createEnvido();
 				break;
 			case 2:
-				action = new Server.Action(Server.ActionType.PostScore, 28); 
+				action = CommonAPI.ActionFactory.createPostScore(28); 
 				break;
 			case 4:
-				action = new Server.Action(Server.ActionType.PostSecondPartChallenge, Server.Messages.Truco); 
+				action = CommonAPI.ActionFactory.createTruco(); 
 				break;
 			default:
-				action = new Server.Action(Server.ActionType.PlayCard, _cards.pop());
+				action = CommonAPI.ActionFactory.createPlayCard(_cardSet.pop());
 				break;
 		}
 		return action;
