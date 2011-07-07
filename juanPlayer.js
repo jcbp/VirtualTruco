@@ -11,7 +11,7 @@ var Player2 = function () {
 	}
 	
 	var i = 0;
-
+	var Challenges = new PlayerAPI.ChallengeFactory();
 	this.play = function (moves) {
 		var gameDataSet = new PlayerAPI.GameDataSet(moves);
 		
@@ -19,13 +19,13 @@ var Player2 = function () {
 		var action;
 		switch(i) {
 			case 1:
-				action = new Server.Action(Server.ActionType.ClimbBet, Server.Messages.Envido);
+				action = Challenges.createEnvido();
 				break;
 			case 2:
 				action = new Server.Action(Server.ActionType.PostScore, 28); 
 				break;
 			case 4:
-				action = new Server.Action(Server.ActionType.PostSecondPartChallenge, Server.Messages.Truco); 
+				action = Challenges.createEnvido(); 
 				break;
 			default:
 				action = new Server.Action(Server.ActionType.PlayCard, _cards.pop());
