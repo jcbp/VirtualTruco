@@ -15,27 +15,60 @@ var Utils = function () {
 var CommonAPI = new function () {
 	
 	this.ActionFactory = new function () {
+
 		this.createEnvido = function () {
 			return new Server.Action(Server.ActionType.PostFirstSectionChallenge, Server.Messages.Envido);
 		}
+		
 		this.createRealEnvido = function () {
 			return new Server.Action(Server.ActionType.PostFirstSectionChallenge, Server.Messages.RealEnvido);
 		}
+		
+		this.createFaltaEnvido = function () {
+			return new Server.Action(Server.ActionType.PostFirstSectionChallenge, Server.Messages.FaltaEnvido);
+		}
+		
+		
+		this.createSonBuenas = function () {
+			return new Server.Action(Server.ActionType.PostFirstSectionChallenge, Server.Messages.SonBuenas);
+		}
+		
+		
 		this.createTruco = function () {
 			return new Server.Action(Server.ActionType.PostSecondSectionChallenge, Server.Messages.Truco);
 		}
+		
+		
+		this.createReTruco = function () {
+			return new Server.Action(Server.ActionType.PostSecondSectionChallenge, Server.Messages.ReTruco);
+		}
+		
+		
+		this.createValeCuatro = function () {
+			return new Server.Action(Server.ActionType.PostSecondSectionChallenge, Server.Messages.ValeCuatro);
+		}
+	
 		this.createQuiero = function () {
 			return new Server.Action(Server.ActionType.ReplyChallenge, Server.Messages.Quiero);
 		}
+		
 		this.createNoQuiero = function () {
 			return new Server.Action(Server.ActionType.ReplyChallenge, Server.Messages.NoQuiero);
 		}
+		
 		this.createPostScore = function (score) {
 			return new Server.Action(Server.ActionType.PostScore, score);
 		}
+		
 		this.createPlayCard = function (card) {
 			return new Server.Action(Server.ActionType.PlayCard, card);
 		}
+		
+		this.createGoingToDeck = function (cards) {
+			return new Server.Action(Server.ActionType.GoingToDeck,cards);
+		}
+		
+		
 		// ... agregar los metodos de las acciones restantes
 	}
 	
