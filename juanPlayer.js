@@ -19,7 +19,13 @@ var Player2 = function () {
 	
 	var i = 0;
 
-	this.play = function (moves) {
+	this.play = function (actions) {
+		
+		var objLog = {"Opciones de": "Juan"};
+		actions.each(function (nodeName, node) {
+			objLog[nodeName] = node;
+		});
+		Log.add(objLog);
 		
 		i++;
 		var action;
@@ -41,6 +47,11 @@ var Player2 = function () {
 				action = CommonAPI.ActionFactory.createPlayCard(_cardSet.pop());
 				break;
 		}
+		
+		Log.add({
+			Juega: "Juan",
+			Message: action.message.name
+		});
 		
 		return action;
 	}

@@ -1,26 +1,10 @@
-/*
- * Utils
- * 
- */
-var copyObject = function (obj, obj2) {
-	for(var i in obj2) {
-		obj[i] = obj2[i];
-	}
-	return obj;
-};
-
-var copyArray = function (array) {
-	var ret = [];
-	for (var i=0; i < array.length; i++) {
-		ret.push(array[i]);
-	};
-	return ret;
-};
 
 /*
- * @namespace
+ * @Namespace
  */
-var Server = new function () {
+var NSDeck = new function () {
+	
+	var _utils = new Utils();
 	
 	/*
 	 * Define lo que es una carta, a partir del valor y el palo
@@ -32,22 +16,15 @@ var Server = new function () {
 			return value + " of " + suit;
 		}
 	};
-	
-	/*
-	 * random testeado de que sea plano
-	 */
-	var random = function (from, to) {
-		return Math.floor(Math.random() * (to - from + 1)) + from;
-	}
-	
+
 	/*
 	 * Mezclador de cartas
 	 */
-	var DeckShuffler = function () {
+	this.DeckShuffler = function () {
 		this.shuffle = function (deck) {
 			var ret = [];
 			while(deck.length) {
-				ret.push(deck.splice(random(0, deck.length), 1)[0]);
+				ret.push(deck.splice(_utils.random(0, deck.length - 1), 1)[0]);
 			}
 			return ret;
 		}
@@ -56,7 +33,7 @@ var Server = new function () {
 	/*
 	 * Maso de cartas
 	 */
-	var Deck = function (values, suits, shuffler) {
+	var Deck = this.Deck = function (values, suits, shuffler) {
 		var _cards = [];
 		
 		var init = function () {
@@ -82,11 +59,22 @@ var Server = new function () {
 	/*
 	 * Se define el mazo de cartas españolas
 	 */
-	var LatinSuitedCard = function (shuffler) {
+	this.SpanishDeck = function (shuffler) {
 		var _deckValues = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
 		var _deckSuits = ["Cup", "Coin", "Club", "Sword"];
 		Deck.call(this, _deckValues, _deckSuits, shuffler);
 	}
+}
+
+/*
+ * @Namespace
+ */
+var Server = new function () {
+
+	/*
+	 * Tanto el servidor como los jugadores tienen su propia instancia de Utils
+	 */
+	var _utils = new Utils();
 	
 	/*
 	 * Mensaje
@@ -100,7 +88,8 @@ var Server = new function () {
 	 * Tipos de mensaje
 	 */
 	var MessageType = this.MessageType = {
-		Challenge: "Challenge",
+		FirstSectionChallenge: "FirstSectionChallenge",
+		SecondSectionChallenge: "SecondSectionChallenge",
 		Reply: "Reply",
 		Surrender: "Surrender"
 	};
@@ -109,432 +98,365 @@ var Server = new function () {
 	 * Enumeración de mensajes
 	 */
 	var Messages = this.Messages = {
-		Envido: new Message("Envido", MessageType.Challenge),
-		RealEnvido: new Message("RealEnvido", MessageType.Challenge),
-		FaltaEnvido: new Message("FaltaEnvido", MessageType.Challenge),
-		Truco: new Message("Truco", MessageType.Challenge),
-		ReTruco: new Message("ReTruco", MessageType.Challenge),
-		ValeCuatro: new Message("ValeCuatro", MessageType.Challenge),
+		Envido: new Message("Envido", MessageType.FirstSectionChallenge),
+		RealEnvido: new Message("RealEnvido", MessageType.FirstSectionChallenge),
+		FaltaEnvido: new Message("FaltaEnvido", MessageType.FirstSectionChallenge),
+		Truco: new Message("Truco", MessageType.SecondSectionChallenge),
+		ReTruco: new Message("ReTruco", MessageType.SecondSectionChallenge),
+		ValeCuatro: new Message("ValeCuatro", MessageType.SecondSectionChallenge),
 		Quiero: new Message("Quiero", MessageType.Reply),
 		NoQuiero: new Message("NoQuiero", MessageType.Reply),
 		SonBuenas: new Message("SonBuenas", MessageType.Surrender)
 	};
 	
 	/*
-	 * Define las relaciones para subir la apuesta, con sus respectivos valores acumulados por combinacion (queridos y no-queridos)
-	 */
-	var EnvidoBet = function (previousValue) {
-		this.intrinsicValue = 2;
-		this.acceptedValue = previousValue + this.intrinsicValue;
-		this.declinedValue = previousValue || 1;
-		
-		if(previousValue==0)
-			this.Envido = new EnvidoBet(this.acceptedValue);
-		this.RealEnvido = new RealEnvidoBet(this.acceptedValue);
-		this.FaltaEnvido = new FaltaEnvidoBet(this.acceptedValue);
-	}
-	
-	var RealEnvidoBet = function (previousValue) {
-		this.intrinsicValue = 3;
-		this.acceptedValue = previousValue + this.intrinsicValue;
-		this.declinedValue = previousValue || 1;
-		
-		this.FaltaEnvido = new FaltaEnvidoBet(this.acceptedValue);
-	}
-	
-	var FaltaEnvidoBet = function (previousValue) {
-		this.intrinsicValue = 3;
-		this.acceptedValue = previousValue + this.intrinsicValue;
-		this.declinedValue = previousValue || 1;
-	}
-	
-	var TrucoBet = function (previousValue) {
-		this.intrinsicValue = 2;
-		this.acceptedValue = previousValue + this.intrinsicValue;
-		this.declinedValue = previousValue || 1;
-		
-		this.ReTruco = new ReTrucoBet(this.acceptedValue);
-	}
-	
-	var ReTrucoBet = function (previousValue) {
-		this.intrinsicValue = 1;
-		this.acceptedValue = previousValue + this.intrinsicValue;
-		this.declinedValue = previousValue || 1;
-		
-		this.ValeCuatro = new ValeCuatroBet(this.acceptedValue);
-	}
-	
-	var ValeCuatroBet = function (previousValue) {
-		this.intrinsicValue = 1;
-		this.acceptedValue = previousValue + this.intrinsicValue;
-		this.declinedValue = previousValue || 1;
-	}
-	
-	/*
-	 * Es el nodo raiz de las relaciones jerarquicas definidas anteriormente
-	 */
-	var BetHierarchy = {
-		Envido: new EnvidoBet(0),
-		RealEnvido: new RealEnvidoBet(0),
-		FaltaEnvido: new FaltaEnvidoBet(0),
-		Truco: new TrucoBet(0)
-	}
-	
-	/*
-	 * Manejador de apuestas
-	 */
-	var BetManager = function () {
-		var _firstSection = BetHierarchy;
-		var _secondSection = BetHierarchy;
-		this.firstSectionIncreseBet = function (bet) {
-			return _firstSection = _firstSection[bet] || null;
-		}
-		this.secondSectionIncreseBet = function (bet) {
-			return _secondSection = _secondSection[bet] || null;
-		}
-		this.getFirstSectionBet = function () {
-			return _firstSection;
-		}
-		this.getSecondSectionBet = function () {
-			return _secondSection;
-		}
-		this.closeFirstSection = function () {
-			_firstSection = {};
-		}
-		this.closeSecondSection = function () {
-			_firstSection = {};
-		}
-	}
-	
-	
-	/*
-	 * Agrupa los datos relevantes de cada jugador
-	 */
-	var PlayerProfile = function (handler, isHand) {
-		this.scorePoints = 0;
-		this.isHand = isHand;
-		this.addScorePoints = function (value) {
-			this.scorePoints += value;
-			if(handler.setScorePoints)
-				handler.setScorePoints(this.scorePoints);
-		}
-		this.handler = handler;
-		this.playedCards = [];
-		this.addPlayedCard = function (card) {
-			this.playedCards.push(card);
-		}
-	}
-
-	/*
-	 * Maneja el cambio de turnos
-	 */
-	var PlayerManager = function (playerHandler1, playerHandler2) {
-		var _player1 = new PlayerProfile(playerHandler1, true);
-		var _player2 = new PlayerProfile(playerHandler2, false);
-		var _currentPlayer = _player1;
-		this.switchPlayer = function () {
-			_currentPlayer = _currentPlayer==_player1? _player2: _player1;
-			return _currentPlayer;
-		}
-		this.getHandPlayer = function () {
-			return _currentPlayer = _player1;
-		}
-		this.nextCardPlayer = function () {
-			return _currentPlayer = _player1.playedCards.length > _player2.playedCards.length? _player2: _player1;
-		}
-		this.getCurrentPlayer = function () {
-			return _currentPlayer;
-		}
-	}
-
-	/*
 	 * Tipos de acciones...
 	 */
 	var ActionType = this.ActionType = {
-		PostFirstSectionChallenge: "PostFirstSectionChallenge",
-		PostSecondSectionChallenge: "PostSecondSectionChallenge",
-		ReplyChallenge: "ReplyChallenge",
-		//IncreaseChallenge: "IncreaseChallenge", // parece que no hace falta
-		PlayCard: "PlayCard",
-		PostSurrender: "PostSurrender",
-		PostScore: "PostScore",
-		GoingToDeck: "GoingToDeck"
-	};
+		Message: "Message",
+		Card: "Card"
+	}
 	
 	/*
 	 * Este objeto es el que se espera que envie cada jugador para interactuar
 	 */
 	var Action = this.Action = function (type, argument) {
 		this.type = type;
-		this.message =	type==ActionType.PostFirstSectionChallenge ||
-						type==ActionType.PostSecondSectionChallenge ||
-						type==ActionType.ReplyChallenge ||
-						// type==ActionType.IncreaseChallenge ||
-						type==ActionType.PostSurrender
-						? argument: null;
-		this.card = type==ActionType.PlayCard? argument: null;
-		this.envidoScore = type==ActionType.PostScore? argument: null;
+		this.message = type==ActionType.Message? argument: null;
+		this.card = type==ActionType.Card? argument: null;
 	}
 	
 	/*
-	 * Comienzo del flujo del juego
+	 * Representa una collecion de nodos (dentro del arbol del flujo del juego)
+	 * Se accede a sus nodos a través del metodo each
 	 */
-	var StartGameState = function (playerManager) {
- 		this.executeAction = function (action, betManager) {
- 			var nextState = null;
- 			var player;
- 			switch(action.type) {
- 				case ActionType.PostFirstSectionChallenge:
- 					if(betManager.firstSectionIncreseBet(action.message.name)) {
-		 				player = playerManager.switchPlayer();
-						nextState = new FirstSectionReplyChallengeState(playerManager);
-					}
- 					break;
- 				case ActionType.PostSecondSectionChallenge:
- 					if(betManager.secondSectionIncreseBet(action.message.name)) {
- 						player = playerManager.switchPlayer();
-						nextState = new SecondSectionReplyChallengeState(playerManager);
- 					}
- 					break;
- 				case ActionType.PlayCard:
- 					if(action.card) {
-	 					player = playerManager.switchPlayer();
-	 					nextState = new PlayCardState(playerManager);
-	 				}
- 					break;
- 			}
-			return nextState;
+	var ChildNodeCollection = function (nodes, state) {
+		var _nodes = {};
+		for(var i in nodes) {
+			if(nodes.hasOwnProperty(i)) {
+				if(nodes[i].evalRequirement(state)) {
+					_nodes[i] = nodes[i];
+				}
+			}
 		}
-	}
-	
-	/*
-	 * FirstSection: envido, real envido, etc...
-	 */
-	var FirstSectionReplyChallengeState = function (playerManager) {
-		this.executeAction = function (action, betManager) {
-			var nextState = null;
-			var player;
- 			switch(action.type) {
- 				case ActionType.ReplyChallenge:
- 					if(action.message==Messages.Quiero) {
- 						player = playerManager.getHandPlayer();
- 						nextState = new PostScoreState(playerManager);
- 					}
- 					else if(action.message==Messages.NoQuiero) {
- 						player = playerManager.switchPlayer();
- 						player.addScorePoints(betManager.getFirstSectionBet().declinedValue);
-						nextState = new PlayCardState(playerManager);
- 					}
- 					betManager.closeFirstSection();
- 					break;
- 				case ActionType.PostFirstSectionChallenge:
-					if(betManager.firstSectionIncreseBet(action.message.name)) {
-		 				player = playerManager.switchPlayer();
-						nextState = new FirstSectionReplyChallengeState(playerManager);
-					}
- 					break;
- 			}
-			return nextState;
+		this.select = function (nodeName) {
+			return _nodes[nodeName];
 		}
-	}
-	
-	/*
-	 * SecondSection: truco, re truco, etc...
-	 */
-	var SecondSectionReplyChallengeState = function (playerManager) {
-		this.executeAction = function (action, betManager) {
-			var nextState = null;
-			var player;
- 			switch(action.type) {
- 				case ActionType.ReplyChallenge:
- 					if(action.message==Messages.Quiero) {
-	 					player = playerManager.switchPlayer();
-	 					nextState = new PlayCardState(playerManager);
- 					}
- 					else if(action.message==Messages.NoQuiero) {
- 						nextState = new SuccessfulConclusionState(playerManager);
- 					}
- 					break;
- 				case ActionType.PostFirstSectionChallenge:
-					if(betManager.firstSectionIncreseBet(action.message.name)) {
-		 				player = playerManager.switchPlayer();
-						nextState = new FirstSectionReplyChallengeState(playerManager);
-					}
- 				case ActionType.PostSecondSectionChallenge:
-					if(betManager.secondSectionIncreseBet(action.message.name)) {
- 						player = playerManager.switchPlayer();
-						nextState = new SecondSectionReplyChallengeState(playerManager);
- 					}
- 					break;
- 			}
-			return nextState;
+		this.each = function (callback) {
+			for(var nodeName in _nodes) {
+				if(_nodes.hasOwnProperty(nodeName)) {
+					callback(nodeName, this.select(nodeName));
+				}
+			}
 		}
 	}
 
 	/*
-	 * Estado: "cantar el tanto"
+	 * Clase Base que representa un nodo del flujo del juego
+	 * Todos los nodos heredan de esta clase
 	 */
-	var PostScoreState = function (playerManager, envidoScore) {
-		var getEnvidoWinner = function (pl1, pl2) {
-			var _winner = pl1.isHand? pl1: pl2;
-			if(pl1.score>pl2.score)
-				_winner = pl1;
-			else if(pl1.score<pl2.score) {
-				_winner = pl2;
-			}
-			return _winner.player;
+	var GameNode = function () {
+		var _nodes = {};
+		var _requires = [];
+		var _useFlowState = false;
+		
+		var _flowState = GameFlowState.getInstance();
+		
+		this.addNodes = this.updateNodes = function (nodes) {
+			_utils.copyObject(_nodes, nodes);
 		}
-		this.executeAction = function (action, betManager) {
-			var nextState = null;
-			var player;
- 			switch(action.type) {
- 				case ActionType.PostScore:
- 					if(!envidoScore) {
-			 			player = playerManager.switchPlayer();
-			 			nextState = new PostScoreState(playerManager, action.envidoScore);
- 					}
- 					else {
- 						getEnvidoWinner({
- 							player: playerManager.getCurrentPlayer(),
- 							score: envidoScore
- 						}, {
- 							player: player = playerManager.nextCardPlayer(),
- 							score: action.envidoScore
- 						}).addScorePoints(betManager.getFirstSectionBet().acceptedValue);
- 						nextState = new PlayCardState(playerManager);
- 					}
- 					break;
- 			}
-			return nextState;
-		}
-	}
-	
-	var PlayCardState = function (playerManager) {
-		this.executeAction = function (action, betManager) {
-			var nextState = null;
-			var player;
- 			switch(action.type) {
- 				case ActionType.PlayCard:
- 					if(action.card) {
-	 					player = playerManager.switchPlayer();
-	 					nextState = new PlayCardState(playerManager);
-	 				}
- 					break;
- 				case ActionType.PostFirstSectionChallenge:
- 					if(betManager.firstSectionIncreseBet(action.message.name)) {
-		 				player = playerManager.switchPlayer();
-						nextState = new FirstSectionReplyChallengeState(playerManager);
-					}
- 					break;
- 				case ActionType.PostSecondSectionChallenge:
- 					if(betManager.secondSectionIncreseBet(action.message.name)) {
- 						player = playerManager.switchPlayer();
-						nextState = new SecondSectionReplyChallengeState(playerManager);
- 					}
- 					break;
- 			}
-			return nextState;
-		}
-	}
-	
-	var SuccessfulConclusionState = function (playerManager) {
-		this.executeAction = function (action, betManager) {
-			Log.add({Separator: "-----------------------------------------------------------------------------------------"});
-			return new StartGameState(playerManager);
-		}
-	}
-	
-	var Log = new function () {
-		var _output = document.createElement("div");
-		document.body.appendChild(_output);
-		_output.style.fontFamily = "Courier New";
-		_output.style.fontSize = "11px";
-		var addColumn = function (str) {
-			var len = 30 - (str+'').length;
-			var pipePos = 26 - (str+'').length;
-			for (var i=0; i < len; i++) {
-				str += "&nbsp;";
-				if(i==pipePos)
-					str += "|";
+		
+		this.evalRequirement = function (state) {
+			var ret = true;
+			for (var i=0; i < _requires.length; i++) {
+				if(!_requires[i](state)) {
+					ret = false;
+					break;
+				}
 			};
-			return str;
+			return ret;
 		}
-		this.add = function (line) {
-			var str = "";
-			for(var i in line) {
-				str += i + ": " + addColumn(line[i]);
-			}
-			_output.innerHTML += str + "<br>";
+		
+		this.requires = function (func) {
+			_requires.push(func);
+		}
+		
+		this.useFlowState = function () {
+			_useFlowState = true;
+		}
+
+		this.getChildNodes = function (state) {
+			var nodes = _useFlowState? _flowState.getNodes(): _nodes;
+			return new ChildNodeCollection(nodes, state);
+		}
+		
+		this.getNodes = function() {
+			return _nodes;
 		}
 	}
 	
 	/*
-	 * Conjunto de jugadas asociadas a un jugador (playerName)
+	 * Quiero, NoQuiero
 	 */
-	var Move = function (playerName, action) {
-		this.playerName = playerName;
-		this.action = action;
-	}
+	var ReplyNode = function () {
+		GameNode.apply(this, arguments);
 
-	var TableContext = function (playerManager) {
-		var _betManager = new BetManager();
-		var _state = new StartGameState(playerManager);
-		var _moves = [];
-		this.play = function (action) {
-			
-			Log.add({
-				player: playerManager.getCurrentPlayer().handler.name,
-				type: action.type,
-				message: action.message? action.message.name: null,
-				card: action.card,
-				score: action.envidoScore
-			});
-			
-			_moves.push(new Move(playerManager.getCurrentPlayer().handler.name, action));
-			return _state = _state.executeAction(action, _betManager);
-		}
-		this.getMoves = function () {
-			return copyArray(_moves);
-		}
+		this.useFlowState();
 	}
-
+	
 	/*
-	 * Clase principal
+	 * Define que todos los mensajes se pueden querer o no querer
 	 */
-	this.GameManager = new function () {
-		var _deck = new LatinSuitedCard(new DeckShuffler());
-		var _player1, _player2;
-		var _hand = _player1;
+	var MessageNode = function () {
+		GameNode.apply(this, arguments);
+		
+		this.addNodes({
+			Quiero: new ReplyNode(),
+			NoQuiero: new ReplyNode()
+		});
+	}
+	
+	/*
+	 * Nodos de la primer parte del juego (envido)
+	 */
+	var FirstSectionChallengeNode = function () {
+		MessageNode.apply(this, arguments);
+
+		this.requires(function(state) {
+			return !!state.firstSectionChallengeAvailable;
+		});
+	}
+	
+	/*
+	 * Nodos de la segunda parte del juego (truco)
+	 */
+	var SecondSectionChallengeNode = function () {
+		MessageNode.apply(this, arguments);
+
+		this.requires(function(state) {
+			return !!state.hasQuiero;
+		});
+//		this.addNodes({
+//			NoQuiero: new GameHandEndNode(playCard)
+//		});
+	}
+	
+	var EnvidoNode = function (previousValue) {
+		FirstSectionChallengeNode.apply(this, arguments);
+		
+		this.intrinsicValue = 2;
+		this.acceptedValue = previousValue + this.intrinsicValue;
+		this.declinedValue = previousValue || 1;
+		
+		var _messageNode = {
+			RealEnvido: new RealEnvidoNode(this.accepted),
+			FaltaEnvido: new FaltaEnvidoNode(this.acceptedValue)
+		};
+		if(previousValue==0)
+			_messageNode.Envido = new EnvidoNode(this.acceptedValue);
+
+		this.addNodes(_messageNode);
+	}
+	
+	var RealEnvidoNode = function (previousValue) {
+		FirstSectionChallengeNode.apply(this, arguments);
+		
+		this.intrinsicValue = 3;
+		this.acceptedValue = previousValue + this.intrinsicValue;
+		this.declinedValue = previousValue || 1;
+		
+		this.addNodes({
+			FaltaEnvido: new FaltaEnvidoNode(this.acceptedValue)
+		});
+	}
+	
+	var FaltaEnvidoNode = function (previousValue) {
+		FirstSectionChallengeNode.apply(this, arguments);
+		
+		this.intrinsicValue = 3;
+		this.acceptedValue = previousValue + this.intrinsicValue;
+		this.declinedValue = previousValue || 1;
+	}
+	
+	var TrucoNode = function (previousValue) {
+		SecondSectionChallengeNode.apply(this, arguments);
+
+		this.intrinsicValue = 2;
+		this.acceptedValue = previousValue + this.intrinsicValue;
+		this.declinedValue = previousValue || 1;
+		
+		this.addNodes({
+			ReTruco: new ReTrucoNode(this.acceptedValue)
+		});
+	}
+	
+	var ReTrucoNode = function (previousValue) {
+		SecondSectionChallengeNode.apply(this, arguments);
+		
+		this.intrinsicValue = 1;
+		this.acceptedValue = previousValue + this.intrinsicValue;
+		this.declinedValue = previousValue || 1;
+		
+		this.addNodes({
+			ValeCuatro: new ValeCuatroNode(this.acceptedValue)
+		});
+	}
+	
+	var ValeCuatroNode = function (previousValue) {
+		SecondSectionChallengeNode.apply(this, arguments);
+
+		this.intrinsicValue = 1;
+		this.acceptedValue = previousValue + this.intrinsicValue;
+		this.declinedValue = previousValue || 1;
+	}
+	
+	
+	var PlayCardNode = function (cardCount) {
+		GameNode.apply(this, arguments);
+		
+		this.useFlowState();
+		
+		// Se crea la cantidad de nodos como de cartas haya: se juegan 6 cartas (3 + 3)
+		if(cardCount > 0) {
+			cardCount--;
+			this.addNodes({
+				PlayCard: new PlayCardNode(cardCount)
+			});
+		}
+	}
+	
+	var RootNode = function (lastNode) {
+		GameNode.apply(this, arguments);
+		
+		this.addNodes({
+			PlayCard: new PlayCardNode(6),
+			Envido: new EnvidoNode(0),
+			RealEnvido: new RealEnvidoNode(0),
+			FaltaEnvido: new FaltaEnvidoNode(0),
+			Truco: new TrucoNode(0)
+		});
+	}
+	
+	/*
+	 * Esta clase ahora usa un singleton pero esta pensada como para que se pueda cambiar la implementacion y que
+	 * getInstance pueda no devolver siempre la misma instancia, por si se quisiera tener mas de un
+	 * juego en ejecución al mismo tiempo 
+	 */
+	var GameFlowState = new function() {
+		var _instance = null;
+		
+		var GameFlowState = function () {
+			var _firstSectionFlow;
+			var _secondSectionFlow;
+			var _cardPlaying;
+			
+			this.getNodes = function () {
+				var nodes = {};
+//				_utils.copyObject(nodes, this.firstSectionFlow);
+				_utils.copyObject(nodes, this.secondSectionFlow);
+				_utils.copyObject(nodes, this.cardPlaying);
+				return nodes;
+			}
+			
+			this.update = function (action, node) {
+				switch(action.type) {
+					case ActionType.Message:
+						switch(action.message.type) {
+							case MessageType.firstSectionChallenge:
+								_firstSectionFlow = node;
+								break;
+							case MessageType.SecondSectionChallenge:
+								_secondSectionFlow = node;
+								break;
+						}
+					case ActionType.Card:
+						_cardPlaying = node;
+						break;
+				}
+			}
+			
+			this.init = function () {
+				
+			}
+		}
+		GameFlowState.getInstance = function () {
+			if(!_instance) {
+				_instance = new GameFlowState();
+			}
+			return _instance;
+		}
+		return GameFlowState;
+	}
+	
+	var ActionRunner = function () {
+		var _currentNode = new RootNode();
+		var _gameFlowState = GameFlowState.getInstance();
+		var _childNodes;
+
+		this.execute = function(action) {
+			if(!_childNodes) {
+				throw new Error("setNextPlayer must be call before the execute method")
+			}
+			switch(action.type) {
+				case ActionType.Message:
+					_currentNode = _childNodes.select(action.message.name);
+					break;
+				case ActionType.Card:
+					_currentNode = _childNodes.select("PlayCard");
+					break;
+			}
+			_gameFlowState.update(action, _currentNode);
+			return _currentNode;
+		}
+		this.setNextPlayer = function (player) {
+			_childNodes = _currentNode.getChildNodes(player.state);
+		}
+		this.getActions = function () {
+			return _childNodes;
+		}
+	}
+	
+	var PlayerData = function (playerHandler) {
+		this.envidoScore = 0;
+		this.pointsEarned = 0;
+		this.state = {
+			hasQuiero: true,
+			firstSectionChallengeAvailable: true
+		}
+		this.handler = playerHandler;
+	}
+	
+	var PlayerManager = function (player1, player2) {
+		var _currentPlayer = player1;
+		this.getNextPlayer = function () {
+			return _currentPlayer = _currentPlayer==player1? player2: player1;
+		}
+	}
+	
+	this.GameManager = function (player1, player2) {
+		var _runner = new ActionRunner();
+		var _player1 = new PlayerData(player1);
+		var _player2 = new PlayerData(player2);
+		var _playerManager = new PlayerManager(_player1, _player2);
+		var _deck = new NSDeck.SpanishDeck(new NSDeck.DeckShuffler());
 		
 		var dealCards = function () {
 			_deck.shuffle();
-			_player1.initHand(_deck.takeCard(3));
-			_player2.initHand(_deck.takeCard(3));
+			player1.initHand(_deck.takeCard(3));
+			player2.initHand(_deck.takeCard(3));
 		}
+		dealCards();
 		
-		this.setPlayer1 = function (player) {
-			_player1 = player;
-		}
-		this.setPlayer2 = function (player) {
-			_player2 = player;
-		}
-		this.start = function () {
-			dealCards();
-			var _playerManager = new PlayerManager(_player1, _player2);
-			var _context = new TableContext(_playerManager);
-			
-			var state, action;
-			var interval = setInterval(function() {
-				action = _playerManager.getCurrentPlayer().handler.play(_context.getMoves());
-				state = _context.play(action);
-				if(!state)
-					clearInterval(interval);
-			}, 10);
-		}
+		
+		while(true) {
+			var nextPlayer = _playerManager.getNextPlayer();
+			_runner.setNextPlayer(nextPlayer);
+			var action = nextPlayer.handler.play(_runner.getActions());
+			if(!_runner.execute(action)) {
+				break;
+			}
+		};
 	}
 }
-
-Server.GameManager.setPlayer1(new Player1());
-Server.GameManager.setPlayer2(new Player2());
-Server.GameManager.start();
-
+	
+new Server.GameManager(new Player1, new Player2);

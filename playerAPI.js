@@ -1,14 +1,69 @@
+
+
+	var Log = new function () {
+		var _output = document.createElement("div");
+		document.body.appendChild(_output);
+		_output.style.fontFamily = "Courier New";
+		_output.style.fontSize = "11px";
+		var addColumn = function (str) {
+			var len = 20 - (str+'').length;
+			var pipePos = 15 - (str+'').length;
+			for (var i=0; i < len; i++) {
+				str += "&nbsp;";
+				if(i==pipePos)
+					str += "|";
+			};
+			return str;
+		}
+		this.add = function (line) {
+			var str = "";
+			for(var i in line) {
+				str += i + ": " + addColumn(line[i]);
+			}
+			_output.innerHTML += str + "<br>";
+		}
+	}
+	
+
 /*
  * Utils
  */
 var Utils = function () {
+	
 	this.getLastElement = function (elements) {
 		return elements[elements.length - 1];
 	}
+	
 	this.random = function (from, to) {
 		return Math.floor(Math.random() * (to - from + 1)) + from;
 	}
+	
+	this.copyObject = function (obj, obj2) {
+		for(var i in obj2) {
+			if(obj2.hasOwnProperty(i)) {
+				obj[i] = obj2[i];
+			}
+		}
+		return obj;
+	};
+	
+	this.EventManager = function () {
+		var _events = {};
+		this.add = function (eventName, callback) {
+			if(!_events[eventName])
+				_events[eventName] = [];
+			_events[eventName].push(callback);
+		}
+		this.fire = function (eventName) {
+			if(_events[eventName]) {
+				for (var i=0; i < _events[eventName].length; i++) {
+					_events[eventName][i]();
+				};
+			}
+		}
+	}
 }
+
 /*
  * API
  */
@@ -17,43 +72,43 @@ var CommonAPI = new function () {
 	this.ActionFactory = new function () {
 
 		this.createEnvido = function () {
-			return new Server.Action(Server.ActionType.PostFirstSectionChallenge, Server.Messages.Envido);
+			return new Server.Action(Server.ActionType.Message, Server.Messages.Envido);
 		}
 		
 		this.createRealEnvido = function () {
-			return new Server.Action(Server.ActionType.PostFirstSectionChallenge, Server.Messages.RealEnvido);
+			return new Server.Action(Server.ActionType.Message, Server.Messages.RealEnvido);
 		}
 		
 		this.createFaltaEnvido = function () {
-			return new Server.Action(Server.ActionType.PostFirstSectionChallenge, Server.Messages.FaltaEnvido);
+			return new Server.Action(Server.ActionType.Message, Server.Messages.FaltaEnvido);
 		}
 		
 		
 		this.createSonBuenas = function () {
-			return new Server.Action(Server.ActionType.PostFirstSectionChallenge, Server.Messages.SonBuenas);
+			return new Server.Action(Server.ActionType.Message, Server.Messages.SonBuenas);
 		}
 		
 		
 		this.createTruco = function () {
-			return new Server.Action(Server.ActionType.PostSecondSectionChallenge, Server.Messages.Truco);
+			return new Server.Action(Server.ActionType.Message, Server.Messages.Truco);
 		}
 		
 		
 		this.createReTruco = function () {
-			return new Server.Action(Server.ActionType.PostSecondSectionChallenge, Server.Messages.ReTruco);
+			return new Server.Action(Server.ActionType.Message, Server.Messages.ReTruco);
 		}
 		
 		
 		this.createValeCuatro = function () {
-			return new Server.Action(Server.ActionType.PostSecondSectionChallenge, Server.Messages.ValeCuatro);
+			return new Server.Action(Server.ActionType.Message, Server.Messages.ValeCuatro);
 		}
 	
 		this.createQuiero = function () {
-			return new Server.Action(Server.ActionType.ReplyChallenge, Server.Messages.Quiero);
+			return new Server.Action(Server.ActionType.Message, Server.Messages.Quiero);
 		}
 		
 		this.createNoQuiero = function () {
-			return new Server.Action(Server.ActionType.ReplyChallenge, Server.Messages.NoQuiero);
+			return new Server.Action(Server.ActionType.Message, Server.Messages.NoQuiero);
 		}
 		
 		this.createPostScore = function (score) {
