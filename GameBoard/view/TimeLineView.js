@@ -16,6 +16,9 @@ var TimeLineView = function (model, controller, elements) {
 
 	// Agrega listeners del modelo
 	this._model.update.attach(function(e, o) {
+		console.log('===== TimeLineView: UPDATE =====');
+		console.log('state -> ' + _this._model.getState());
+		console.log('move -> ' + _this._model.getCurrentMove());
 		_this.updateControls();
 	});
 	
@@ -36,8 +39,8 @@ TimeLineView.prototype = {
 		for (var s in e) {
 			if (e[s] != e.timeLine)
 				e[s].hover(
-					function() { $(this).addClass('ui-state-hover'); }, 
-					function() { $(this).removeClass('ui-state-hover'); }
+					function() { if (!$(this).is('.ui-state-disabled')) $(this).addClass('ui-state-hover'); }, 
+					function() { if (!$(this).is('.ui-state-disabled')) $(this).removeClass('ui-state-hover'); }
 				);
 		}
 		
@@ -79,7 +82,6 @@ TimeLineView.prototype = {
 		else
 			e.nextMoveBtn.removeClass('ui-state-disabled');
 
-		
 		// Actualiza la linea de tiempo
 		e.timeLine.slider("value", this._model.getCurrentMove());
 	}

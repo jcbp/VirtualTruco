@@ -2,6 +2,8 @@
  * GameBoardModel Class
  */
 var GameBoardModel = function (gameDataSet) {
+	this.SPEED = 1800;
+	
 	this.states = {
 		PLAYING: "playing",
 		PAUSED: "paused"
@@ -12,12 +14,21 @@ var GameBoardModel = function (gameDataSet) {
 	this._state = this.states.PAUSED;
 	this._speedMultiplier = 1;
 	
+	var _this = this;
+	
 	// Crea los eventos necesarios
-	//this.speedChanged = new Event(this);
-	//this.stateChanged = new Event(this);
-	//this.moveChanged = new Event(this);
-	//this.handChanged = new Event(this);
 	this.update = new Event(this);
+	
+	this.timerTick = function() {
+		var move = _this._curMove + 1;
+		_this.setMove(move);
+		
+		// TO-DO: Chequear con la cantidad total de jugadas
+		if (move >= 100)
+			_this.setState(_this.states.PAUSED);
+	};
+	
+	this._timer = new Timer(this.SPEED * this._speedMultiplier, this.timerTick);
 };
 
 GameBoardModel.prototype = {
@@ -36,6 +47,15 @@ GameBoardModel.prototype = {
 	setState: function(state) {
 		if (this._state != state) {
 			this._state = state;
+			if (this._state == this.states.PLAYING) {
+				
+				// TO-DO: Chequear con la cantidad total de jugadas
+				if (this._curMove >= 100)
+					this._curMove = 0;
+				
+				this._timer.start();
+			} else
+				this._timer.stop();
 			this.update.notify();
 		}
 	},
@@ -50,7 +70,6 @@ GameBoardModel.prototype = {
 	
 	setSpeedMultiplier: function(multiplier) {
 		this._speedMultiplier = multiplier;
-		this.update.notify();
 	},
 	
 	/*

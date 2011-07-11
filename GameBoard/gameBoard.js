@@ -2,7 +2,7 @@ $(function () {
 	$(document).title = "VT &raquo; Player1 vs Player2";
 	
 	var i = 0;
-	var resources = ["libs/jquery-ui-1.8.14.custom.min.js", "utils/Event.js", "model/GameBoardModel.js", "controller/TimeLineController.js", "view/TimeLineView.js"];
+	var resources = ["libs/jquery-ui-1.8.14.custom.min.js", "utils/Event.js", "utils/Timer.js", "model/GameBoardModel.js", "controller/TimeLineController.js", "view/TimeLineView.js"];
 	getScripts();
 	
 	function getScripts() {
