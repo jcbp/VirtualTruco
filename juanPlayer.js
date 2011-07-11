@@ -2,6 +2,14 @@
  * IA of Juan
  */
 var Player2 = function () {
+var actionMove = [CommonAPI.NO_QUIERO,
+CommonAPI.QUIERO,
+CommonAPI.RE_TRUCO,
+CommonAPI.PLAY_CARD,
+CommonAPI.PLAY_CARD,
+CommonAPI.PLAY_CARD
+];
+
 	var _cardSet = [];
 	var _utils = new Utils();
 	
@@ -27,26 +35,47 @@ var Player2 = function () {
 		});
 		Log.add(objLog);
 		
-		i++;
 		var action;
 
-		switch(i) {
-			case 1:
+		switch(actionMove[i++]) {
+			case CommonAPI.ENVIDO:
 				action = CommonAPI.ActionFactory.createEnvido();
 				break;
-			case 2:
-				action = CommonAPI.ActionFactory.createQuiero();
+			case CommonAPI.REAL_ENVIDO:
+				action = CommonAPI.ActionFactory.createRealEnvido(); 
 				break;
-			case 3:
-				action = CommonAPI.ActionFactory.createPostScore(28); 
+			case CommonAPI.FALTA_ENVIDO:
+				action = CommonAPI.ActionFactory.createFaltaEnvido();
 				break;
-			case 5:
+			case CommonAPI.SON_BUENAS:
+				action = CommonAPI.ActionFactory.createSonBuenas();
+				break;
+			case  CommonAPI.TRUCO:
 				action = CommonAPI.ActionFactory.createTruco();
+				break;
+			case  CommonAPI.RE_TRUCO:
+				action = CommonAPI.ActionFactory.createReTruco();
+				break;
+			case  CommonAPI.VALE_CAUTRO:
+				action = CommonAPI.ActionFactory.createValeCuatro();
+				break;
+			case  CommonAPI.QUIERO:
+				action = CommonAPI.ActionFactory.createQuiero(); 
+				break;
+			case  CommonAPI.NO_QUIERO:
+				action = CommonAPI.ActionFactory.createNoQuiero();
+				break;
+			case CommonAPI.POST_SCORE:
+				action = CommonAPI.ActionFactory.createPostScore(28);
+				break;
+			case CommonAPI.GO_TO_DECK:
+				action = CommonAPI.ActionFactory.createGoingToDeck();
 				break;
 			default:
 				action = CommonAPI.ActionFactory.createPlayCard(_cardSet.pop());
 				break;
 		}
+		
 		
 		Log.add({
 			Juega: "Juan",
