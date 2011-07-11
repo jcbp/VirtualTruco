@@ -1,5 +1,4 @@
 
-
 	var Log = new function () {
 		var _output = document.createElement("div");
 		document.body.appendChild(_output);
@@ -68,7 +67,19 @@ var Utils = function () {
  * API
  */
 var CommonAPI = new function () {
-	
+	this.ENVIDO 		= "envido"
+	this.REAL_ENVIDO	= "realEnvido";
+	this.FALTA_ENVIDO 	= "faltaEnvido";
+	this.TRUCO 		= "truco";
+	this.RE_TRUCO	 	= "reTruco";
+	this.VALE_CAUTRO	= "valeCuatro";
+	this.QUIERO 		= "quiero";
+	this.NO_QUIERO 		= "noQuiero";
+	this.GO_TO_DECK		= "goToDeck";
+	this.POST_SCORE 	= "PostScore";
+	this.PLAY_CARD 		= "playCard";
+	this.SON_BUENAS		= "sonBuenas";
+
 	this.ActionFactory = new function () {
 
 		this.createEnvido = function () {
