@@ -19,6 +19,7 @@ var TimeLineView = function (model, controller, elements) {
 		console.log('===== TimeLineView: UPDATE =====');
 		console.log('state -> ' + _this._model.getState());
 		console.log('move -> ' + _this._model.getCurrentMove());
+		console.log('speed -> ' + _this._model.SPEED * _this._model.getSpeedMultiplier());
 		_this.updateControls();
 	});
 	
@@ -50,6 +51,9 @@ TimeLineView.prototype = {
 		e.pauseBtn.click(function() { _this._controller.pause(); } );
 		e.prevMoveBtn.click(function() { _this._controller.previousMove(); } );
 		e.nextMoveBtn.click(function() { _this._controller.nextMove(); } );
+		e.normalSpeedBtn.click(function() { _this._controller.normalSpeed(); } );
+		e.fastSpeedBtn.click(function() { _this._controller.fastSpeed(); } );
+		e.fasterSpeedBtn.click(function() { _this._controller.fasterSpeed(); } );
 		
 		e.timeLine.slider({
 			min: this._min,
@@ -72,16 +76,13 @@ TimeLineView.prototype = {
 		}
 		
 		// Fija los botones como disponibles y no disponibles
-		if (this._model.getCurrentMove() <= this._min)
-			e.prevMoveBtn.addClass('ui-state-disabled');
-		else
-			e.prevMoveBtn.removeClass('ui-state-disabled');
-
-		if (this._model.getCurrentMove() >= this._max)
-			e.nextMoveBtn.addClass('ui-state-disabled');
-		else
-			e.nextMoveBtn.removeClass('ui-state-disabled');
-
+		
+		this._model.getCurrentMove() <= this._min ? e.prevMoveBtn.addClass('ui-state-disabled') : e.prevMoveBtn.removeClass('ui-state-disabled');
+		this._model.getCurrentMove() >= this._max ? e.nextMoveBtn.addClass('ui-state-disabled') : e.nextMoveBtn.removeClass('ui-state-disabled');
+		this._model.getSpeedMultiplier() == this._model.speedMultipliers.NORMAL ? e.normalSpeedBtn.addClass('ui-state-disabled') : e.normalSpeedBtn.removeClass('ui-state-disabled');
+		this._model.getSpeedMultiplier() == this._model.speedMultipliers.FAST ? e.fastSpeedBtn.addClass('ui-state-disabled') : e.fastSpeedBtn.removeClass('ui-state-disabled');
+		this._model.getSpeedMultiplier() == this._model.speedMultipliers.FASTER ? e.fasterSpeedBtn.addClass('ui-state-disabled') : e.fasterSpeedBtn.removeClass('ui-state-disabled');
+		
 		// Actualiza la linea de tiempo
 		e.timeLine.slider("value", this._model.getCurrentMove());
 	}

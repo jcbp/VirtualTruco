@@ -26,5 +26,17 @@ TimeLineController.prototype = {
 	
 	seekMove: function(move) {
 		this._model.setMove(move);
+	},
+	
+	normalSpeed: function() {
+		this._model.setSpeedMultiplier(this._model.speedMultipliers.NORMAL);
+	},
+
+	fastSpeed: function() {
+		this._model.setSpeedMultiplier(this._model.speedMultipliers.FAST);
+	},
+	
+	fasterSpeed: function() {
+		this._model.setSpeedMultiplier(this._model.speedMultipliers.FASTER);
 	}
 };

@@ -8,11 +8,17 @@ var GameBoardModel = function (gameDataSet) {
 		PLAYING: "playing",
 		PAUSED: "paused"
 	};
+	
+	this.speedMultipliers = {
+		NORMAL: 1,
+		FAST: 0.6,
+		FASTER: 0.3
+	}
 
 	this._gameDataSet = gameDataSet;
 	this._curMove = 0;
 	this._state = this.states.PAUSED;
-	this._speedMultiplier = 1;
+	this._speedMultiplier = this.speedMultipliers.NORMAL;
 	
 	var _this = this;
 	
@@ -70,6 +76,8 @@ GameBoardModel.prototype = {
 	
 	setSpeedMultiplier: function(multiplier) {
 		this._speedMultiplier = multiplier;
+		this._timer.update(this.SPEED * this._speedMultiplier);
+		this.update.notify();
 	},
 	
 	/*

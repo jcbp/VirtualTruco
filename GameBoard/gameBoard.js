@@ -24,8 +24,9 @@ $(function () {
       'pauseBtn': $('#pauseBtn'),
 			'nextMoveBtn': $('#nextMoveBtn'),
 			'prevMoveBtn': $('#prevMoveBtn'),
-			'nextHandBtn': $('#nextHandBtn'),
-			'prevHandBtn': $('#prevHandBtn'),
+			'normalSpeedBtn': $('#normalSpeedBtn'),
+			'fastSpeedBtn': $('#fastSpeedBtn'),
+			'fasterSpeedBtn': $('#fasterSpeedBtn'),
 			'timeLine': $('#timeLine div')
 		});
 		view.show();

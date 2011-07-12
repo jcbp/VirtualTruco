@@ -24,5 +24,13 @@ Timer.prototype = {
 	stop: function() {			
 		_this.enable = false;
 		clearInterval(_this.timerId);
+	},
+	
+	update: function(interval) {
+		this.interval = interval;
+		if (this.enable) {
+			this.stop();
+			this.start();
+		}
 	}
 };
