@@ -1,28 +1,64 @@
+var HTTPLoader = function(url,method,scope,func){
+    var _handler, _scope;
+    var _req    =  window.XMLHttpRequest ? new XMLHttpRequest( ) : new ActiveXObject("Microsoft.XMLHTTP");    
+    this.method =  method || "Post";  
+    
+    this.data = function(){
+        return _req.responseText;
+    }
+    
+    this.load  = function(url){
+        alert(url)
+        url = url || _url;
+        if(!url)return;
+        _req.open(this.method,url,true);
+        _req.send(null);
+    }
+    
+    this.setCallback = function(scope,func){
+        _handler = func;
+        _scope   = scope;
+    }
+    
+    var callbackHandler = function(){
+        if(handler)handler.apply(_scope,_req.responseText);
+    }
+    _url     = url;
+    _scope   = scope;
+    _handler = func
+    _req.onreadystatechange = callbackHandler;
+    
+}
 
-	var Log = new function () {
-		var _output = document.createElement("div");
-		document.body.appendChild(_output);
-		_output.style.fontFamily = "Courier New";
-		_output.style.fontSize = "11px";
-		var addColumn = function (str) {
-			var len = 20 - (str+'').length;
-			var pipePos = 15 - (str+'').length;
-			for (var i=0; i < len; i++) {
-				str += "&nbsp;";
-				if(i==pipePos)
-					str += "|";
-			};
-			return str;
-		}
-		this.add = function (line) {
-			var str = "";
-			for(var i in line) {
-				str += i + ": " + addColumn(line[i]);
-			}
-			_output.innerHTML += str + "<br>";
-		}
-	}
-	
+var Log = new function () {
+    var _output = document.createElement("div");    
+    _output.style.fontFamily = "Courier New";
+    _output.style.fontSize   = "11px";
+    document.body.appendChild(_output);
+    
+    var addColumn = function (str) {
+        var len = 20 - (str+'').length;
+        var pipePos = 15 - (str+'').length;
+        for (var i=0; i < len; i++) {
+                str += "&nbsp;";
+                if(i==pipePos)
+                        str += "|";
+        };
+        return str;
+    }
+    this.add = function (line) {
+        var str = "";
+        for(var i in line) {
+            str += i + ": " + addColumn(line[i]);
+        }
+        _output.innerHTML += str + "<br>";
+    }
+
+    this.save = function(p1,p2){        
+        new HTTPLoader("http:/www.trucoai.com.ar?data="+escape(_output.innerHTML)+"&p1="+p1+"&p2="+p2,"Get").load();        
+    }
+}
+
 
 /*
  * Utils
