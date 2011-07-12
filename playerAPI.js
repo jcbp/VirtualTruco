@@ -1,34 +1,46 @@
 var HTTPLoader = function(url,method,scope,func){
-    var _handler, _scope;
-    var _req    =  window.XMLHttpRequest ? new XMLHttpRequest( ) : new ActiveXObject("Microsoft.XMLHTTP");    
+    var _ready, _cancel;
+    var _cnn    =  window.XMLHttpRequest ? new XMLHttpRequest( ) : new ActiveXObject("Microsoft.XMLHTTP");    
     this.method =  method || "Post";  
     
     this.data = function(){
-        return _req.responseText;
+        return _cnn.responseText;
     }
     
     this.load  = function(url){
-        alert(url)
         url = url || _url;
         if(!url)return;
-        _req.open(this.method,url,true);
-        _req.send(null);
+        _cnn.open(this.method,url,true);
+        _cnn.send(null);
     }
     
-    this.setCallback = function(scope,func){
-        _handler = func;
-        _scope   = scope;
+    this.setReadyCallback = function(scope,func){
+       _ready = {handler:func,scope:scope};
+    }
+    
+    this.setCancelCallback = function(scope,func){
+        _cancel = {handler:func,scope:scope};
+    }
+    
+    this.addRequestHeader = function(type,content){
+        _cnn.setRequestHeader( type, content );
     }
     
     var callbackHandler = function(){
-        if(handler)handler.apply(_scope,_req.responseText);
+        var req        
+        if(_ready.handler && _cnn.readyState == 4){
+            req = _cnn.status && /200|304/.test( _cnn.status ) ? _ready : _cancel;
+            req.handler.call(req.scope,_cnn.responseText);
+        }
     }
-    _url     = url;
-    _scope   = scope;
-    _handler = func
-    _req.onreadystatechange = callbackHandler;
+    
+    _url     = url;    
+    _cnn.onreadystatechange = callbackHandler;
+    this.setReadyCallback(scope,func);
+    this.setCancelCallback(scope,function(){alert("Error")});
     
 }
+
 
 var Log = new function () {
     var _output = document.createElement("div");    
