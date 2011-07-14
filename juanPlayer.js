@@ -2,12 +2,14 @@
  * IA of Juan
  */
 var Player2 = function () {
-var actionMove = [CommonAPI.NO_QUIERO,
-CommonAPI.QUIERO,
-CommonAPI.RE_TRUCO,
-CommonAPI.PLAY_CARD,
-CommonAPI.PLAY_CARD,
-CommonAPI.PLAY_CARD
+var actionMove = [
+	CommonAPI.ENVIDO,
+	CommonAPI.REAL_ENVIDO,
+	CommonAPI.PLAY_CARD,
+	CommonAPI.RE_TRUCO,
+	CommonAPI.PLAY_CARD,
+	CommonAPI.QUIERO,
+	CommonAPI.PLAY_CARD
 ];
 
 	var _cardSet = [];
@@ -79,7 +81,7 @@ CommonAPI.PLAY_CARD
 		
 		Log.add({
 			Juega: "Juan",
-			Message: action.message.name
+			Message: action.message? action.message.name: action.card
 		});
 		
 		return action;

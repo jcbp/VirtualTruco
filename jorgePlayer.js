@@ -2,13 +2,16 @@
  * IA of Jorge
  */
 var Player1 = function () {
-var actionMove = [CommonAPI.ENVIDO,
-CommonAPI.TRUCO,
-CommonAPI.PLAY_CARD,
-CommonAPI.QUIERO,
-CommonAPI.PLAY_CARD,
-CommonAPI.PLAY_CARD
+var actionMove = [
+	CommonAPI.TRUCO,
+	CommonAPI.ENVIDO,
+	CommonAPI.QUIERO,
+	CommonAPI.PLAY_CARD,
+	CommonAPI.QUIERO,
+	CommonAPI.VALE_CUATRO,
+	CommonAPI.PLAY_CARD
 ];
+
 
 	var _cardSet = [];
 	var _scorePoints = 0;
@@ -39,7 +42,7 @@ CommonAPI.PLAY_CARD
 		
 		
 		var action;
-                switch(actionMove[i++]) {
+        switch(actionMove[i++]) {
 			case CommonAPI.ENVIDO:
 				action = CommonAPI.ActionFactory.createEnvido();
 				break;
@@ -58,7 +61,7 @@ CommonAPI.PLAY_CARD
 			case  CommonAPI.RE_TRUCO:
 				action = CommonAPI.ActionFactory.createReTruco();
 				break;
-			case  CommonAPI.VALE_CAUTRO:
+			case  CommonAPI.VALE_CUATRO:
 				action = CommonAPI.ActionFactory.createValeCuatro();
 				break;
 			case  CommonAPI.QUIERO:
@@ -80,7 +83,7 @@ CommonAPI.PLAY_CARD
 
 		Log.add({
 			Juega: "Jorge",
-			Message: action.message.name
+			Message: action.message? action.message.name: action.card
 		});
 
 		

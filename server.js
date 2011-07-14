@@ -130,7 +130,7 @@ var Server = new function () {
 	 * Representa una collecion de nodos (dentro del arbol del flujo del juego)
 	 * Se accede a sus nodos a través del metodo each
 	 */
-	var ChildNodeCollection = function (nodes, state) {
+	var NodeCollection = function (nodes, state) {
 		var _nodes = {};
 		for(var i in nodes) {
 			if(nodes.hasOwnProperty(i)) {
@@ -155,12 +155,13 @@ var Server = new function () {
 	 * Clase Base que representa un nodo del flujo del juego
 	 * Todos los nodos heredan de esta clase
 	 */
-	var GameNode = function () {
+	var BaseNode = function () {
 		var _nodes = {};
 		var _requires = [];
-		var _useFlowState = false;
+		var _branches = [];
+		var _enumerable = false;
 		
-		var _flowState = GameFlowState.getInstance();
+		this.name = "Base";
 		
 		this.addNodes = this.updateNodes = function (nodes) {
 			_utils.copyObject(_nodes, nodes);
@@ -177,17 +178,33 @@ var Server = new function () {
 			return ret;
 		}
 		
+		this.addBranch = function (branch) {
+			if(branch) {
+				_branches.push(branch);
+			}
+		}
+
 		this.requires = function (func) {
 			_requires.push(func);
 		}
 		
-		this.useFlowState = function () {
-			_useFlowState = true;
-		}
-
 		this.getChildNodes = function (state) {
-			var nodes = _useFlowState? _flowState.getNodes(): _nodes;
-			return new ChildNodeCollection(nodes, state);
+			var nodes = {};
+			_utils.copyObject(nodes, _nodes);
+			if(_branches) {
+				for (var i=0; i < _branches.length; i++) {
+					_utils.copyObject(nodes, _branches[i].getEnumerableNodes());
+				};
+			}
+			return new NodeCollection(nodes, state);
+		}
+		
+		this.setAsEnumerable = function () {
+			_enumerable = true;
+		}
+		
+		this.isEnumerable = function () {
+			return !!_enumerable;
 		}
 		
 		this.getNodes = function() {
@@ -198,199 +215,197 @@ var Server = new function () {
 	/*
 	 * Quiero, NoQuiero
 	 */
-	var ReplyNode = function () {
-		GameNode.apply(this, arguments);
-
-		this.useFlowState();
-	}
-	
-	/*
-	 * Define que todos los mensajes se pueden querer o no querer
-	 */
-	var MessageNode = function () {
-		GameNode.apply(this, arguments);
+	var ReplyNode = function (playCardBranch, trucoBranch) {
+		BaseNode.apply(this, arguments);
+		this.name = "Reply";
 		
-		this.addNodes({
-			Quiero: new ReplyNode(),
-			NoQuiero: new ReplyNode()
-		});
+		this.addBranch(playCardBranch);
+		this.addBranch(trucoBranch);
 	}
 	
 	/*
 	 * Nodos de la primer parte del juego (envido)
 	 */
-	var FirstSectionChallengeNode = function () {
-		MessageNode.apply(this, arguments);
+	var FirstSectionChallengeNode = function (previousValue, playCardBranch, trucoBranch) {
+		BaseNode.apply(this, arguments);
+		this.name = "FirstSectionChallenge";
 
 		this.requires(function(state) {
 			return !!state.firstSectionChallengeAvailable;
+		});
+		this.addNodes({
+			Quiero: new ReplyNode(playCardBranch, trucoBranch),
+			NoQuiero: new ReplyNode(playCardBranch, trucoBranch)
 		});
 	}
 	
 	/*
 	 * Nodos de la segunda parte del juego (truco)
 	 */
-	var SecondSectionChallengeNode = function () {
-		MessageNode.apply(this, arguments);
+	var SecondSectionChallengeNode = function (previousValue, playCardBranch, trucoBranch) {
+		BaseNode.apply(this, arguments);
+		this.name = "SecondSectionChallenge";
 
 		this.requires(function(state) {
 			return !!state.hasQuiero;
 		});
-//		this.addNodes({
-//			NoQuiero: new GameHandEndNode(playCard)
-//		});
+		this.addNodes({
+			Quiero: new ReplyNode(playCardBranch, trucoBranch),
+			NoQuiero: new ReplyNode(playCardBranch, trucoBranch)
+		});
 	}
 	
-	var EnvidoNode = function (previousValue) {
+	var EnvidoNode = function (previousValue, playCardBranch, trucoBranch) {
 		FirstSectionChallengeNode.apply(this, arguments);
+		this.name = "Envido";
 		
 		this.intrinsicValue = 2;
 		this.acceptedValue = previousValue + this.intrinsicValue;
 		this.declinedValue = previousValue || 1;
 		
 		var _messageNode = {
-			RealEnvido: new RealEnvidoNode(this.accepted),
-			FaltaEnvido: new FaltaEnvidoNode(this.acceptedValue)
+			RealEnvido: new RealEnvidoNode(this.accepted, playCardBranch, trucoBranch),
+			FaltaEnvido: new FaltaEnvidoNode(this.acceptedValue, playCardBranch, trucoBranch)
 		};
 		if(previousValue==0)
-			_messageNode.Envido = new EnvidoNode(this.acceptedValue);
+			_messageNode.Envido = new EnvidoNode(this.acceptedValue, playCardBranch, trucoBranch);
 
 		this.addNodes(_messageNode);
+		this.setAsEnumerable();
 	}
 	
-	var RealEnvidoNode = function (previousValue) {
+	var RealEnvidoNode = function (previousValue, playCardBranch, trucoBranch) {
 		FirstSectionChallengeNode.apply(this, arguments);
+		this.name = "RealEnvido";
 		
 		this.intrinsicValue = 3;
 		this.acceptedValue = previousValue + this.intrinsicValue;
 		this.declinedValue = previousValue || 1;
 		
 		this.addNodes({
-			FaltaEnvido: new FaltaEnvidoNode(this.acceptedValue)
+			FaltaEnvido: new FaltaEnvidoNode(this.acceptedValue, playCardBranch, trucoBranch)
 		});
+		this.setAsEnumerable();
 	}
 	
-	var FaltaEnvidoNode = function (previousValue) {
+	var FaltaEnvidoNode = function (previousValue, playCardBranch, trucoBranch) {
 		FirstSectionChallengeNode.apply(this, arguments);
+		this.name = "FaltaEnvido";
 		
 		this.intrinsicValue = 3;
 		this.acceptedValue = previousValue + this.intrinsicValue;
 		this.declinedValue = previousValue || 1;
+		
+		this.setAsEnumerable();
 	}
 	
-	var TrucoNode = function (previousValue) {
+	var TrucoNode = function (previousValue, playCardBranch, trucoBranch, envidoBranch) {
 		SecondSectionChallengeNode.apply(this, arguments);
+		this.name = "Truco";
 
 		this.intrinsicValue = 2;
 		this.acceptedValue = previousValue + this.intrinsicValue;
 		this.declinedValue = previousValue || 1;
 		
 		this.addNodes({
-			ReTruco: new ReTrucoNode(this.acceptedValue)
+			ReTruco: new ReTrucoNode(this.acceptedValue, playCardBranch, trucoBranch, envidoBranch)
 		});
+		this.setAsEnumerable();
+		this.addBranch(envidoBranch);
 	}
 	
-	var ReTrucoNode = function (previousValue) {
+	var ReTrucoNode = function (previousValue, playCardBranch, trucoBranch, envidoBranch) {
 		SecondSectionChallengeNode.apply(this, arguments);
+		this.name = "ReTruco";
 		
 		this.intrinsicValue = 1;
 		this.acceptedValue = previousValue + this.intrinsicValue;
 		this.declinedValue = previousValue || 1;
 		
 		this.addNodes({
-			ValeCuatro: new ValeCuatroNode(this.acceptedValue)
+			ValeCuatro: new ValeCuatroNode(this.acceptedValue, playCardBranch, trucoBranch, envidoBranch)
 		});
+		this.setAsEnumerable();
 	}
 	
-	var ValeCuatroNode = function (previousValue) {
+	var ValeCuatroNode = function (previousValue, playCardBranch, trucoBranch, envidoBranch) {
 		SecondSectionChallengeNode.apply(this, arguments);
+		this.name = "ValeCuatro";
 
 		this.intrinsicValue = 1;
 		this.acceptedValue = previousValue + this.intrinsicValue;
 		this.declinedValue = previousValue || 1;
+		
+		this.setAsEnumerable();
 	}
 	
-	
-	var PlayCardNode = function (cardCount) {
-		GameNode.apply(this, arguments);
-		
-		this.useFlowState();
-		
+	var PlayCardNode = function (cardCount, trucoBranch, envidoBranch) {
+		BaseNode.apply(this, arguments);
+		this.name = "PlayCard";
+
 		// Se crea la cantidad de nodos como de cartas haya: se juegan 6 cartas (3 + 3)
 		if(cardCount > 0) {
 			cardCount--;
 			this.addNodes({
-				PlayCard: new PlayCardNode(cardCount)
+				PlayCard: new PlayCardNode(cardCount, trucoBranch)
 			});
 		}
+		this.addBranch(trucoBranch);
+		this.addBranch(envidoBranch);
+		this.setAsEnumerable();
 	}
-	
-	var RootNode = function (lastNode) {
-		GameNode.apply(this, arguments);
-		
-		this.addNodes({
-			PlayCard: new PlayCardNode(6),
-			Envido: new EnvidoNode(0),
-			RealEnvido: new RealEnvidoNode(0),
-			FaltaEnvido: new FaltaEnvidoNode(0),
-			Truco: new TrucoNode(0)
+
+	var RootNode = function (playCardBranch, trucoBranch, envidoBranch) {
+		BaseNode.apply(this, arguments);
+		this.name = "Root";
+
+		playCardBranch.setNodes({
+			PlayCard: new PlayCardNode(5, trucoBranch, envidoBranch)	// de 0 a 5 => 6 cartas
 		});
+		trucoBranch.setNodes({
+			Truco: new TrucoNode(0, playCardBranch, trucoBranch, envidoBranch)
+		});
+		envidoBranch.setNodes({
+			Envido: new EnvidoNode(0, playCardBranch, trucoBranch),
+			RealEnvido: new RealEnvidoNode(0, playCardBranch, trucoBranch),
+			FaltaEnvido: new FaltaEnvidoNode(0, playCardBranch, trucoBranch)
+		});
+
+		this.addNodes(envidoBranch.getNodes());
+		this.addNodes(playCardBranch.getNodes());
+		this.addNodes(trucoBranch.getNodes());
 	}
-	
-	/*
-	 * Esta clase ahora usa un singleton pero esta pensada como para que se pueda cambiar la implementacion y que
-	 * getInstance pueda no devolver siempre la misma instancia, por si se quisiera tener mas de un
-	 * juego en ejecución al mismo tiempo 
-	 */
-	var GameFlowState = new function() {
-		var _instance = null;
+
+	var Branch = function () {
+		var _nodes;
+		var _enumerableNodes;
 		
-		var GameFlowState = function () {
-			var _firstSectionFlow;
-			var _secondSectionFlow;
-			var _cardPlaying;
-			
-			this.getNodes = function () {
-				var nodes = {};
-//				_utils.copyObject(nodes, this.firstSectionFlow);
-				_utils.copyObject(nodes, this.secondSectionFlow);
-				_utils.copyObject(nodes, this.cardPlaying);
-				return nodes;
-			}
-			
-			this.update = function (action, node) {
-				switch(action.type) {
-					case ActionType.Message:
-						switch(action.message.type) {
-							case MessageType.firstSectionChallenge:
-								_firstSectionFlow = node;
-								break;
-							case MessageType.SecondSectionChallenge:
-								_secondSectionFlow = node;
-								break;
-						}
-					case ActionType.Card:
-						_cardPlaying = node;
-						break;
+		this.setNodes = function (nodes) {
+			_enumerableNodes = {};
+			for(var i in nodes) {
+				if(nodes.hasOwnProperty(i)) {
+					if(nodes[i].isEnumerable()) {
+						_enumerableNodes[i] = nodes[i];
+					}
 				}
 			}
-			
-			this.init = function () {
-				
-			}
+			_nodes = nodes;
 		}
-		GameFlowState.getInstance = function () {
-			if(!_instance) {
-				_instance = new GameFlowState();
-			}
-			return _instance;
+		
+		this.getNodes = function () {
+			return _nodes;
 		}
-		return GameFlowState;
+		
+		this.getEnumerableNodes = function () {
+			return _enumerableNodes;
+		}
 	}
 	
 	var ActionRunner = function () {
-		var _currentNode = new RootNode();
-		var _gameFlowState = GameFlowState.getInstance();
+		var _playCardBranch = new Branch();
+		var _trucoBranch = new Branch();
+		var _envidoBranch = new Branch();
+		var _currentNode = new RootNode(_playCardBranch, _trucoBranch, _envidoBranch);
 		var _childNodes;
 
 		this.execute = function(action) {
@@ -400,12 +415,17 @@ var Server = new function () {
 			switch(action.type) {
 				case ActionType.Message:
 					_currentNode = _childNodes.select(action.message.name);
+					if(action.message.type==MessageType.SecondSectionChallenge && _currentNode) {
+						_trucoBranch.setNodes(_currentNode.getNodes());
+					}
 					break;
 				case ActionType.Card:
 					_currentNode = _childNodes.select("PlayCard");
+					if(_currentNode) {
+						_playCardBranch.setNodes(_currentNode.getNodes());
+					}
 					break;
 			}
-			_gameFlowState.update(action, _currentNode);
 			return _currentNode;
 		}
 		this.setNextPlayer = function (player) {
@@ -427,7 +447,7 @@ var Server = new function () {
 	}
 	
 	var PlayerManager = function (player1, player2) {
-		var _currentPlayer = player1;
+		var _currentPlayer = null;
 		this.getNextPlayer = function () {
 			return _currentPlayer = _currentPlayer==player1? player2: player1;
 		}

@@ -120,7 +120,7 @@ var CommonAPI = new function () {
 	this.FALTA_ENVIDO 	= "faltaEnvido";
 	this.TRUCO 		= "truco";
 	this.RE_TRUCO	 	= "reTruco";
-	this.VALE_CAUTRO	= "valeCuatro";
+	this.VALE_CUATRO	= "valeCuatro";
 	this.QUIERO 		= "quiero";
 	this.NO_QUIERO 		= "noQuiero";
 	this.GO_TO_DECK		= "goToDeck";
@@ -175,7 +175,7 @@ var CommonAPI = new function () {
 		}
 		
 		this.createPlayCard = function (card) {
-			return new Server.Action(Server.ActionType.PlayCard, card);
+			return new Server.Action(Server.ActionType.Card, card);
 		}
 		
 		this.createGoingToDeck = function (cards) {
