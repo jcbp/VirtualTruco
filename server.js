@@ -132,12 +132,19 @@ var Server = new function () {
 	 */
 	var NodeCollection = function (nodes, state) {
 		var _nodes = {};
+		var _isEmpty = true;
+		
 		for(var i in nodes) {
 			if(nodes.hasOwnProperty(i)) {
 				if(nodes[i].evalRequirement(state)) {
 					_nodes[i] = nodes[i];
+					_isEmpty = false;
 				}
 			}
+		}
+		
+		this.isEmpty = function () {
+			return _isEmpty;
 		}
 		this.select = function (nodeName) {
 			return _nodes[nodeName];
@@ -223,6 +230,12 @@ var Server = new function () {
 		this.addBranch(trucoBranch);
 	}
 	
+	var NoQuieroNode = function () {
+		BaseNode.apply(this, arguments);
+		this.name = "NoQuiero";
+	}
+	
+	
 	/*
 	 * Nodos de la primer parte del juego (envido)
 	 */
@@ -231,7 +244,7 @@ var Server = new function () {
 		this.name = "FirstSectionChallenge";
 
 		this.requires(function(state) {
-			return !!state.firstSectionChallengeAvailable;
+			return !!state.firstSectionIsOpen;
 		});
 		this.addNodes({
 			Quiero: new ReplyNode(playCardBranch, trucoBranch),
@@ -251,7 +264,7 @@ var Server = new function () {
 		});
 		this.addNodes({
 			Quiero: new ReplyNode(playCardBranch, trucoBranch),
-			NoQuiero: new ReplyNode(playCardBranch, trucoBranch)
+			NoQuiero: new NoQuieroNode()
 		});
 	}
 	
@@ -410,22 +423,38 @@ var Server = new function () {
 		var _currentPlayer;
 
 		this.execute = function(action) {
+			playerManager.closeFirstSection(_currentPlayer);
 			if(!_childNodes) {
-				throw new Error("setNextPlayer must be call before the execute method")
+				throw new Error("setNextPlayer must be call before the execute method");
 			}
 			switch(action.type) {
 				case ActionType.Message:
 					_currentNode = _childNodes.select(action.message.name);
-					if(action.message.type==MessageType.SecondSectionChallenge && _currentNode) {
-						_trucoBranch.setNodes(_currentNode.getNodes());
+					if(_currentNode) {
+						if(action.message.type==MessageType.SecondSectionChallenge) {
+							_trucoBranch.setNodes(_currentNode.getNodes());
+							playerManager.setupQuiero(_currentPlayer);
+						}
+						else if(action.message.type==MessageType.FirstSectionChallenge) {
+							playerManager.openFirstSection(_currentPlayer);
+						}
+						
+						// ESTAR ATENTO DE ESTE CODIGO
+						if(_currentNode.getChildNodes(_currentPlayer.state).select("PlayCard")) {
+							playerManager.setNextPlayer(cardProcessor.getNextPlayer());
+						}
+						else {
+							playerManager.switchPlayer();
+						}
+						// **** DEJAR DE ESTAR ATENTO
 					}
-					playerManager.switchPlayer();
 					break;
 				case ActionType.Card:
 					_currentNode = _childNodes.select("PlayCard");
 					if(_currentNode) {
 						_playCardBranch.setNodes(_currentNode.getNodes());
 					}
+					
 					cardProcessor.playCard(_currentPlayer, action.card);
 					playerManager.setNextPlayer(cardProcessor.getNextPlayer());
 					break;
@@ -435,6 +464,9 @@ var Server = new function () {
 		this.setNextPlayer = function (player) {
 			_currentPlayer = player;
 			_childNodes = _currentNode.getChildNodes(player.state);
+			if(_childNodes.isEmpty()) {
+				cardProcessor.closeHand(player);
+			}
 		}
 		this.getActions = function () {
 			return _childNodes;
@@ -497,6 +529,10 @@ var Server = new function () {
 			}
 		}
 		
+		this.closeHand = function (player) {
+			player.trucoCicle.isWinner = true;
+		}
+		
 		this.getNextPlayer = function () {
 			return _nextPlayer;
 		}
@@ -513,7 +549,7 @@ var Server = new function () {
 		};
 		this.state = {
 			hasQuiero: true,
-			firstSectionChallengeAvailable: true
+			firstSectionIsOpen: true
 		}
 		this.handler = playerHandler;
 		this.setAsHand = function () {
@@ -537,6 +573,21 @@ var Server = new function () {
 		this.getNextPlayer = function () {
 			return _currentPlayer;
 		}
+		this.setupQuiero = function (player) {
+			player.state.hasQuiero = false;
+			var theOtherPlayer = player==player1? player2: player1;
+			theOtherPlayer.state.hasQuiero = true;
+		}
+		this.closeFirstSection = function (player) {
+			player.state.firstSectionIsOpen = false;
+		}
+		this.openFirstSection = function (player) {
+			var theOtherPlayer = player==player1? player2: player1;
+			theOtherPlayer.state.firstSectionIsOpen = true;
+		}
+		this.closeSecondSection = function () {
+			_currentPlayer = null;
+		}
 	}
 	
 	this.GameManager = function (player1, player2) {
@@ -556,13 +607,14 @@ var Server = new function () {
 		}
 		dealCards();
 
-		while(true) {
-			var nextPlayer = _playerManager.getNextPlayer();
-			if(!nextPlayer) {
+		var nextPlayer;
+		while(nextPlayer = _playerManager.getNextPlayer()) {
+			_runner.setNextPlayer(nextPlayer);
+			var actions = _runner.getActions();
+			if(actions.isEmpty()) {
 				break;
 			}
-			_runner.setNextPlayer(nextPlayer);
-			var action = nextPlayer.handler.play(_runner.getActions());
+			var action = nextPlayer.handler.play(actions);
 			if(!_runner.execute(action)) {
 				break;
 			}
@@ -571,4 +623,4 @@ var Server = new function () {
 	}
 }
 	
-new Server.GameManager(new Player1, new Player2);
+new Server.GameManager(new RandomPlayer("Randomio"), new RandomPlayer("Randamia"));

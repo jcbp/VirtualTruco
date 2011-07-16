@@ -1,7 +1,7 @@
 /*
  * IA of Randomio
  */
-var Player2 = function () {
+var RandomPlayer = function (name) {
 	/*var actionMove = [
 	CommonAPI.PLAY_CARD,
 	CommonAPI.PLAY_CARD,
@@ -20,7 +20,7 @@ var Player2 = function () {
 	var _cardSet = [];
 	var _utils = new Utils();
 	
-	this.name = "Randomio";
+	this.name = name || "Randomio";
 
 	this.initHand = function (cardSet) {
 		_cardSet = cardSet;
@@ -42,11 +42,12 @@ var Player2 = function () {
 	}
 	this.play = function (actions) {
 		var _allMyOptions = [];
+		var playerName = this.name;
 
-		var objLog = {"Opciones de": "Randomio"};
+		var objLog = {"Opciones de": playerName};
 		actions.each(function (nodeName, node) {
 			objLog[nodeName] = node;
-			_allMyOptions.push(node.name);
+			_allMyOptions.push(nodeName);
 		});
 		
 		Log.add(objLog);
@@ -94,7 +95,7 @@ var Player2 = function () {
 		
 		
 		Log.add({
-			Juega: "Randomio",
+			Juega: playerName,
 			Message: action.message? action.message.name: action.card
 		});
 		
