@@ -204,7 +204,7 @@ var CommonAPI = new function () {
 		}
 	}
 	
-	this.CardPacketManager = function (cards) {
+	this.CardSet = function (cards) {
 		
 		/*
 		 * Se define el peso de las cartas	

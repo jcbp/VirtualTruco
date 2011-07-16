@@ -401,12 +401,13 @@ var Server = new function () {
 		}
 	}
 	
-	var ActionRunner = function () {
+	var ActionRunner = function (playerManager, cardProcessor) {
 		var _playCardBranch = new Branch();
 		var _trucoBranch = new Branch();
 		var _envidoBranch = new Branch();
 		var _currentNode = new RootNode(_playCardBranch, _trucoBranch, _envidoBranch);
 		var _childNodes;
+		var _currentPlayer;
 
 		this.execute = function(action) {
 			if(!_childNodes) {
@@ -418,17 +419,21 @@ var Server = new function () {
 					if(action.message.type==MessageType.SecondSectionChallenge && _currentNode) {
 						_trucoBranch.setNodes(_currentNode.getNodes());
 					}
+					playerManager.switchPlayer();
 					break;
 				case ActionType.Card:
 					_currentNode = _childNodes.select("PlayCard");
 					if(_currentNode) {
 						_playCardBranch.setNodes(_currentNode.getNodes());
 					}
+					cardProcessor.playCard(_currentPlayer, action.card);
+					playerManager.setNextPlayer(cardProcessor.getNextPlayer());
 					break;
 			}
 			return _currentNode;
 		}
 		this.setNextPlayer = function (player) {
+			_currentPlayer = player;
 			_childNodes = _currentNode.getChildNodes(player.state);
 		}
 		this.getActions = function () {
@@ -436,28 +441,112 @@ var Server = new function () {
 		}
 	}
 	
+	var CardPlayingProcessor = function (player1, player2) {
+		var _cardSet = new CommonAPI.CardSet();
+		var _handPoints = [100, 50, 100];
+		var _nextPlayer = player1.isHand? player1: player2;
+		var _lastPlayer = null;
+		
+		var getHandPlayer = function () {
+			return player1.isHand? player1: player2;
+		}
+		
+		var evalHand = function (player1, player2) {
+			var cardWeight1 = _cardSet.getCardWeight(player1.trucoCicle.currentCard);
+			var cardWeight2 = _cardSet.getCardWeight(player2.trucoCicle.currentCard);
+			var points = _handPoints.pop();
+			
+			if(cardWeight1 < cardWeight2) {
+				player1.trucoCicle.score += points;
+				_nextPlayer = player1;
+			}
+			else if(cardWeight1 > cardWeight2) {
+				player2.trucoCicle.score += points;
+				_nextPlayer = player2;
+			}
+			else {
+				player1.trucoCicle.score += points;
+				player2.trucoCicle.score += points;
+				_nextPlayer = getHandPlayer();
+			}
+		}
+		
+		var evalWinner = function (player1, player2) {
+			var max = Math.max(player1.trucoCicle.score, player2.trucoCicle.score);
+			if(max >= 150) {
+				var player = player1.trucoCicle.score==max? player1: player2;
+				player.trucoCicle.isWinner = true;
+				_nextPlayer = null;
+			}
+		}
+		
+		var switchPlayer = function () {
+			_nextPlayer = _nextPlayer==player1? player2: player1;
+		}
+		
+		this.playCard = function (player, card) {
+			player.trucoCicle.currentCard = card;
+			if(_lastPlayer) {
+				evalHand(_lastPlayer, player);
+				evalWinner(_lastPlayer, player);
+				_lastPlayer = null;
+			}
+			else {
+				_lastPlayer = player;
+				switchPlayer();
+			}
+		}
+		
+		this.getNextPlayer = function () {
+			return _nextPlayer;
+		}
+	}
+	
 	var PlayerData = function (playerHandler) {
 		this.envidoScore = 0;
 		this.pointsEarned = 0;
+		this.isHand = false;
+		this.trucoCicle = {
+			score: 0,
+			isWinner: false,
+			currentCard: null
+		};
 		this.state = {
 			hasQuiero: true,
 			firstSectionChallengeAvailable: true
 		}
 		this.handler = playerHandler;
+		this.setAsHand = function () {
+			this.isHand = true;
+			this.trucoCicle.score = 1;
+		} 
 	}
 	
 	var PlayerManager = function (player1, player2) {
-		var _currentPlayer = null;
+		var _currentPlayer = player1.isHand? player1: (player2.isHand? player2: null);
+		if(!_currentPlayer) {
+			throw new Error("No hand player");
+		}
+
+		this.setNextPlayer = function (player) {
+			_currentPlayer = player;
+		}
+		this.switchPlayer = function () {
+			_currentPlayer = _currentPlayer==player1? player2: player1;
+		}
 		this.getNextPlayer = function () {
-			return _currentPlayer = _currentPlayer==player1? player2: player1;
+			return _currentPlayer;
 		}
 	}
 	
 	this.GameManager = function (player1, player2) {
-		var _runner = new ActionRunner();
 		var _player1 = new PlayerData(player1);
 		var _player2 = new PlayerData(player2);
+		_player1.setAsHand();
+		
+		var _cardProcessor = new CardPlayingProcessor(_player1, _player2);
 		var _playerManager = new PlayerManager(_player1, _player2);
+		var _runner = new ActionRunner(_playerManager, _cardProcessor);
 		var _deck = new NSDeck.SpanishDeck(new NSDeck.DeckShuffler());
 		
 		var dealCards = function () {
@@ -466,16 +555,19 @@ var Server = new function () {
 			player2.initHand(_deck.takeCard(3));
 		}
 		dealCards();
-		
-		
+
 		while(true) {
 			var nextPlayer = _playerManager.getNextPlayer();
+			if(!nextPlayer) {
+				break;
+			}
 			_runner.setNextPlayer(nextPlayer);
 			var action = nextPlayer.handler.play(_runner.getActions());
 			if(!_runner.execute(action)) {
 				break;
 			}
 		};
+		alert((_player1.trucoCicle.isWinner? _player1.handler.name: (_player2.trucoCicle.isWinner? _player2.handler.name: "ERROR")) + " Win");
 	}
 }
 	
