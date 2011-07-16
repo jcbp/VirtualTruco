@@ -115,18 +115,18 @@ var Utils = function () {
  * API
  */
 var CommonAPI = new function () {
-	this.ENVIDO 		= "envido"
-	this.REAL_ENVIDO	= "realEnvido";
-	this.FALTA_ENVIDO 	= "faltaEnvido";
-	this.TRUCO 		= "truco";
-	this.RE_TRUCO	 	= "reTruco";
-	this.VALE_CUATRO	= "valeCuatro";
-	this.QUIERO 		= "quiero";
-	this.NO_QUIERO 		= "noQuiero";
-	this.GO_TO_DECK		= "goToDeck";
+	this.ENVIDO 		= "Envido"
+	this.REAL_ENVIDO	= "RealEnvido";
+	this.FALTA_ENVIDO 	= "FaltaEnvido";
+	this.TRUCO 		= "Truco";
+	this.RE_TRUCO	 	= "ReTruco";
+	this.VALE_CUATRO	= "ValeCuatro";
+	this.QUIERO 		= "Quiero";
+	this.NO_QUIERO 		= "NoQuiero";
+	this.GO_TO_DECK		= "GoToDeck";
 	this.POST_SCORE 	= "PostScore";
-	this.PLAY_CARD 		= "playCard";
-	this.SON_BUENAS		= "sonBuenas";
+	this.PLAY_CARD 		= "PlayCard";
+	this.SON_BUENAS		= "SonBuenas";
 
 	this.ActionFactory = new function () {
 
