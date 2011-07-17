@@ -67,7 +67,7 @@ var Log = new function () {
     }
 
     this.save = function(p1,p2){        
-        new HTTPLoader("http:/www.trucoai.com.ar?data="+escape(_output.innerHTML)+"&p1="+p1+"&p2="+p2,"Get").load();        
+        new HTTPLoader("http://aitruco.com.ar/add.php?data="+escape(_output.innerHTML)+"&p1="+p1+"&p2="+p2,"Get").load();        
     }
 }
 
