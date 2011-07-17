@@ -18,8 +18,6 @@ var RandomPlayer = function (name) {
 		_scorePoints = scorePoints;
 	}
 	
-	var i = 0;
-	
 	this.getRandomOption = function(opts)
 	{
 		return opts[_utils.random(0,opts.length-1)];
@@ -74,7 +72,7 @@ var RandomPlayer = function (name) {
 			case CommonAPI.GO_TO_DECK:
 				action = CommonAPI.ActionFactory.createGoingToDeck();
 				break;
-			default:
+			case CommonAPI.PLAY_CARD:
 				action = CommonAPI.ActionFactory.createPlayCard(_cardSet.pop());
 				break;
 		}
