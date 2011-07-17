@@ -25,6 +25,7 @@ var RandomPlayer = function (name) {
 	
 	}
 	this.play = function (actions) {
+		var _randOption = null; 
 		var _allMyOptions = [];
 		var playerName = this.name;
 
@@ -36,8 +37,8 @@ var RandomPlayer = function (name) {
 		
 		Log.add(objLog);
 		
-		var _randOption = this.getRandomOption(_allMyOptions);
-
+		_randOption = this.getRandomOption(_allMyOptions);
+		
 		switch(_randOption) {
 			case CommonAPI.ENVIDO:
 				action = CommonAPI.ActionFactory.createEnvido();
@@ -57,7 +58,7 @@ var RandomPlayer = function (name) {
 			case  CommonAPI.RE_TRUCO:
 				action = CommonAPI.ActionFactory.createReTruco();
 				break;
-			case  CommonAPI.VALE_CAUTRO:
+			case  CommonAPI.VALE_CUATRO:
 				action = CommonAPI.ActionFactory.createValeCuatro();
 				break;
 			case  CommonAPI.QUIERO:
