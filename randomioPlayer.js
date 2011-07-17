@@ -2,20 +2,6 @@
  * IA of Randomio
  */
 var RandomPlayer = function (name) {
-	/*var actionMove = [
-	CommonAPI.PLAY_CARD,
-	CommonAPI.PLAY_CARD,
-	CommonAPI.PLAY_CARD,
-
-
-	CommonAPI.ENVIDO,
-	CommonAPI.REAL_ENVIDO,
-	CommonAPI.PLAY_CARD,
-	CommonAPI.RE_TRUCO,
-	CommonAPI.PLAY_CARD,
-	CommonAPI.QUIERO,
-	CommonAPI.PLAY_CARD
-];*/
 	
 	var _cardSet = [];
 	var _utils = new Utils();
