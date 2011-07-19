@@ -33,10 +33,26 @@ table {
 }
 
 /* Base */
-body { font-family: "Trebuchet MS", sans-serif; }
+html, body { height: 100%; }
+body {
+	font-family: "Trebuchet MS", sans-serif;
+	background: #000 url(../img/table_texture_3.jpg) no-repeat top center;
+}
+#board {
+	position: relative;
+	margin: 0 auto;
+	padding: 0 20px;
+	width: 1024px;
+	height: 100%;
+}
+
+/* Time Line View */
 ul#timeLine-controls {
+	position: absolute;
+	bottom: 20px;
 	margin: 0;
 	padding: 0;
+	z-index: 500;
 }
 ul#timeLine-controls li {
 	margin: 2px;
@@ -51,5 +67,10 @@ ul#timeLine-controls span.ui-icon {
 	margin: 0 4px;
 }
 ul#timeLine-controls #timeLine {
-	width: 60%;
+	padding: 4px 10px;
+	width: 820px;
 }
+ul#timeLine-controls #timeLine div { margin: 2px 0 0; }
+
+/* Cards View */
+div#cards { height: 100%; }

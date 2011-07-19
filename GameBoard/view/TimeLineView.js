@@ -76,7 +76,6 @@ TimeLineView.prototype = {
 		}
 		
 		// Fija los botones como disponibles y no disponibles
-		
 		this._model.getCurrentMove() <= this._min ? e.prevMoveBtn.addClass('ui-state-disabled') : e.prevMoveBtn.removeClass('ui-state-disabled');
 		this._model.getCurrentMove() >= this._max ? e.nextMoveBtn.addClass('ui-state-disabled') : e.nextMoveBtn.removeClass('ui-state-disabled');
 		this._model.getSpeedMultiplier() == this._model.speedMultipliers.NORMAL ? e.normalSpeedBtn.addClass('ui-state-disabled') : e.normalSpeedBtn.removeClass('ui-state-disabled');
