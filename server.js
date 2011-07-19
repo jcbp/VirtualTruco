@@ -127,6 +127,16 @@ var Server = new function () {
 	}
 	
 	/*
+	 * Tipos de respuestas...
+	 */
+	var ReplyType = {
+		FirstSectionQuiero: "FirstSectionQuiero",
+		FirstSectionNoQuiero: "FirstSectionNoQuiero",
+		SecondSectionQuiero: "SecondSectionQuiero",
+		SecondSectionNoQuiero: "SecondSectionNoQuiero"
+	};
+	
+	/*
 	 * Representa una collecion de nodos (dentro del arbol del flujo del juego)
 	 * Se accede a sus nodos a través del metodo each
 	 */
@@ -220,21 +230,50 @@ var Server = new function () {
 	}
 	
 	/*
-	 * Quiero, NoQuiero
+	 * Define una respuesta de apuesta (Quiero, NoQuiero)
 	 */
-	var ReplyNode = function (playCardBranch, trucoBranch) {
+	var ReplyNode = function (value, playCardBranch, trucoBranch) {
 		BaseNode.apply(this, arguments);
 		this.name = "Reply";
+		this.value = value;
 		
 		this.addBranch(playCardBranch);
 		this.addBranch(trucoBranch);
 	}
 	
-	var NoQuieroNode = function () {
-		BaseNode.apply(this, arguments);
-		this.name = "NoQuiero";
+	/*
+	 * Concrete Quiero (First Section)
+	 */
+	var FirstSectionQuieroNode = function (value, playCardBranch, trucoBranch) {
+		ReplyNode.apply(this, arguments);
+		this.type = this.name = ReplyType.FirstSectionQuiero;
 	}
 	
+	/*
+	 * Concrete NoQuiero (First Section)
+	 */
+	var FirstSectionNoQuieroNode = function (value, playCardBranch, trucoBranch) {
+		ReplyNode.apply(this, arguments);
+		this.type = this.name = ReplyType.FirstSectionNoQuiero;
+	}
+	
+	/*
+	 * Concrete Quiero (Second Section)
+	 */
+	var SecondSectionQuieroNode = function (value, playCardBranch, trucoBranch) {
+		ReplyNode.apply(this, arguments);
+		this.type = this.name = ReplyType.SecondSectionQuiero;
+	}
+	
+	/*
+	 * Concrete NoQuiero (Second Section)
+	 */
+	var SecondSectionNoQuieroNode = function (value, playCardBranch, trucoBranch) {
+		// end hand: empty node
+		BaseNode.apply(this, arguments);
+		this.type = this.name = ReplyType.SecondSectionNoQuiero;
+		this.value = value;
+	}
 	
 	/*
 	 * Nodos de la primer parte del juego (envido)
@@ -242,14 +281,17 @@ var Server = new function () {
 	var FirstSectionChallengeNode = function (previousValue, playCardBranch, trucoBranch) {
 		BaseNode.apply(this, arguments);
 		this.name = "FirstSectionChallenge";
-
+		
 		this.requires(function(state) {
 			return !!state.firstSectionIsOpen;
 		});
-		this.addNodes({
-			Quiero: new ReplyNode(playCardBranch, trucoBranch),
-			NoQuiero: new ReplyNode(playCardBranch, trucoBranch)
-		});
+		
+		this.setValues = function (acceptedValue, declinedValue) {
+			this.addNodes({
+				Quiero: new FirstSectionQuieroNode(acceptedValue, playCardBranch, trucoBranch),
+				NoQuiero: new FirstSectionNoQuieroNode(declinedValue, playCardBranch, trucoBranch)
+			});
+		}
 	}
 	
 	/*
@@ -262,96 +304,132 @@ var Server = new function () {
 		this.requires(function(state) {
 			return !!state.hasQuiero;
 		});
-		this.addNodes({
-			Quiero: new ReplyNode(playCardBranch, trucoBranch),
-			NoQuiero: new NoQuieroNode()
-		});
+		
+		this.setValues = function (acceptedValue, declinedValue) {
+			this.addNodes({
+				Quiero: new SecondSectionQuieroNode(acceptedValue, playCardBranch, trucoBranch),
+				NoQuiero: new SecondSectionNoQuieroNode(declinedValue, playCardBranch, trucoBranch)
+			});
+		}
 	}
 	
+	/*
+	 * Concrete Node Envido
+	 */
 	var EnvidoNode = function (previousValue, playCardBranch, trucoBranch) {
 		FirstSectionChallengeNode.apply(this, arguments);
 		this.name = "Envido";
 		
-		this.intrinsicValue = 2;
-		this.acceptedValue = previousValue + this.intrinsicValue;
-		this.declinedValue = previousValue || 1;
+		var _intrinsicValue = 2;
+		var _acceptedValue = previousValue + _intrinsicValue;
+		var _declinedValue = previousValue || 1;
+		
+		this.setValues(_acceptedValue, _declinedValue);
 		
 		var _messageNode = {
-			RealEnvido: new RealEnvidoNode(this.accepted, playCardBranch, trucoBranch),
-			FaltaEnvido: new FaltaEnvidoNode(this.acceptedValue, playCardBranch, trucoBranch)
+			RealEnvido: new RealEnvidoNode(_acceptedValue, playCardBranch, trucoBranch),
+			FaltaEnvido: new FaltaEnvidoNode(_acceptedValue, playCardBranch, trucoBranch)
 		};
 		if(previousValue==0)
-			_messageNode.Envido = new EnvidoNode(this.acceptedValue, playCardBranch, trucoBranch);
+			_messageNode.Envido = new EnvidoNode(_acceptedValue, playCardBranch, trucoBranch);
 
 		this.addNodes(_messageNode);
 		this.setAsEnumerable();
 	}
 	
+	/*
+	 * Concrete Node RealEnvido
+	 */
 	var RealEnvidoNode = function (previousValue, playCardBranch, trucoBranch) {
 		FirstSectionChallengeNode.apply(this, arguments);
 		this.name = "RealEnvido";
 		
-		this.intrinsicValue = 3;
-		this.acceptedValue = previousValue + this.intrinsicValue;
-		this.declinedValue = previousValue || 1;
+		var _intrinsicValue = 3;
+		var _acceptedValue = previousValue + _intrinsicValue;
+		var _declinedValue = previousValue || 1;
+		
+		this.setValues(_acceptedValue, _declinedValue);
 		
 		this.addNodes({
-			FaltaEnvido: new FaltaEnvidoNode(this.acceptedValue, playCardBranch, trucoBranch)
+			FaltaEnvido: new FaltaEnvidoNode(_acceptedValue, playCardBranch, trucoBranch)
 		});
 		this.setAsEnumerable();
 	}
 	
+	/*
+	 * Concrete Node FaltaEnvido
+	 */
 	var FaltaEnvidoNode = function (previousValue, playCardBranch, trucoBranch) {
 		FirstSectionChallengeNode.apply(this, arguments);
 		this.name = "FaltaEnvido";
 		
-		this.intrinsicValue = 3;
-		this.acceptedValue = previousValue + this.intrinsicValue;
-		this.declinedValue = previousValue || 1;
+		var _intrinsicValue = 6;
+		var _acceptedValue = previousValue + _intrinsicValue;
+		var _declinedValue = previousValue || 1;
+		
+		this.setValues(_acceptedValue, _declinedValue);
 		
 		this.setAsEnumerable();
 	}
 	
+	/*
+	 * Concrete Node Truco
+	 */
 	var TrucoNode = function (previousValue, playCardBranch, trucoBranch, envidoBranch) {
 		SecondSectionChallengeNode.apply(this, arguments);
 		this.name = "Truco";
 
-		this.intrinsicValue = 2;
-		this.acceptedValue = previousValue + this.intrinsicValue;
-		this.declinedValue = previousValue || 1;
+		var _intrinsicValue = 2;
+		var _acceptedValue = previousValue + _intrinsicValue;
+		var _declinedValue = previousValue || 1;
+		
+		this.setValues(_acceptedValue, _declinedValue);
 		
 		this.addNodes({
-			ReTruco: new ReTrucoNode(this.acceptedValue, playCardBranch, trucoBranch, envidoBranch)
+			ReTruco: new ReTrucoNode(_acceptedValue, playCardBranch, trucoBranch, envidoBranch)
 		});
 		this.setAsEnumerable();
 		this.addBranch(envidoBranch);
 	}
 	
+	/*
+	 * Concrete Node ReTruco
+	 */
 	var ReTrucoNode = function (previousValue, playCardBranch, trucoBranch, envidoBranch) {
 		SecondSectionChallengeNode.apply(this, arguments);
 		this.name = "ReTruco";
 		
-		this.intrinsicValue = 1;
-		this.acceptedValue = previousValue + this.intrinsicValue;
-		this.declinedValue = previousValue || 1;
+		var _intrinsicValue = 1;
+		var _acceptedValue = previousValue + _intrinsicValue;
+		var _declinedValue = previousValue || 1;
+		
+		this.setValues(_acceptedValue, _declinedValue);
 		
 		this.addNodes({
-			ValeCuatro: new ValeCuatroNode(this.acceptedValue, playCardBranch, trucoBranch, envidoBranch)
+			ValeCuatro: new ValeCuatroNode(_acceptedValue, playCardBranch, trucoBranch, envidoBranch)
 		});
 		this.setAsEnumerable();
 	}
 	
+	/*
+	 * Concrete Node ValeCuatro
+	 */
 	var ValeCuatroNode = function (previousValue, playCardBranch, trucoBranch, envidoBranch) {
 		SecondSectionChallengeNode.apply(this, arguments);
 		this.name = "ValeCuatro";
 
-		this.intrinsicValue = 1;
-		this.acceptedValue = previousValue + this.intrinsicValue;
-		this.declinedValue = previousValue || 1;
+		var _intrinsicValue = 1;
+		var _acceptedValue = previousValue + _intrinsicValue;
+		var _declinedValue = previousValue || 1;
+		
+		this.setValues(_acceptedValue, _declinedValue);
 		
 		this.setAsEnumerable();
 	}
 	
+	/*
+	 * Concrete Node PlayCard
+	 */
 	var PlayCardNode = function (cardCount, trucoBranch, envidoBranch) {
 		BaseNode.apply(this, arguments);
 		this.name = "PlayCard";
@@ -368,6 +446,9 @@ var Server = new function () {
 		this.setAsEnumerable();
 	}
 
+	/*
+	 * Concrete Node Root
+	 */
 	var RootNode = function (playCardBranch, trucoBranch, envidoBranch) {
 		BaseNode.apply(this, arguments);
 		this.name = "Root";
@@ -389,6 +470,9 @@ var Server = new function () {
 		this.addNodes(trucoBranch.getNodes());
 	}
 
+	/*
+	 * Representa una rama en el flujo del juego
+	 */
 	var Branch = function () {
 		var _nodes;
 		var _enumerableNodes;
@@ -414,7 +498,40 @@ var Server = new function () {
 		}
 	}
 	
-	var ActionRunner = function (playerManager, cardProcessor) {
+	/*
+	 * Se realiza el seguimiento de puntos de cada apuesta.
+	 * Los puntos no son asignados a ningun jugador, solo se va guardando hasta donde se levantó las apuestas
+	 */
+	var PointTracker = function () {
+		var _firstSectionPoints = 0;
+		var _secondSectionPoints = 1;
+		
+		this.evaluateNode = function (node) {
+			switch(node.type) {
+				case ReplyType.FirstSectionQuiero:
+				case ReplyType.FirstSectionNoQuiero:
+					_firstSectionPoints = node.value;
+					break;
+				case ReplyType.SecondSectionQuiero:
+				case ReplyType.SecondSectionNoQuiero:
+					_secondSectionPoints = node.value;
+					break;
+			}
+		}
+		
+		this.getFirstSectionPoints = function () {
+			return _firstSectionPoints;
+		}
+		
+		this.getSecondSectionPoints = function () {
+			return _secondSectionPoints;
+		}
+	}
+	
+	/*
+	 * Ejecuta las acciones realizadas por los jugadores
+	 */
+	var ActionRunner = function (playerManager, cardProcessor, envidoProcessor, pointTracker) {
 		var _playCardBranch = new Branch();
 		var _trucoBranch = new Branch();
 		var _envidoBranch = new Branch();
@@ -431,6 +548,7 @@ var Server = new function () {
 				case ActionType.Message:
 					_currentNode = _childNodes.select(action.message.name);
 					if(_currentNode) {
+						pointTracker.evaluateNode(_currentNode);
 						if(action.message.type==MessageType.SecondSectionChallenge) {
 							_trucoBranch.setNodes(_currentNode.getNodes());
 							playerManager.setupQuiero(_currentPlayer);
@@ -438,7 +556,9 @@ var Server = new function () {
 						else if(action.message.type==MessageType.FirstSectionChallenge) {
 							playerManager.openFirstSection(_currentPlayer);
 						}
-						
+						else if(action.message.type==MessageType.Reply) {
+							envidoProcessor.playEnvido(_currentPlayer, _currentNode);
+						}
 						// ESTAR ATENTO DE ESTE CODIGO
 						if(_currentNode.getChildNodes(_currentPlayer.state).select("PlayCard")) {
 							playerManager.setNextPlayer(cardProcessor.getNextPlayer());
@@ -473,7 +593,47 @@ var Server = new function () {
 		}
 	}
 	
-	var CardPlayingProcessor = function (player1, player2) {
+	/*
+	 * Procesamiento de apuestas de la primer sección (envido)
+	 */
+	var EnvidoProcessor = function (playerManager, pointTracker) {
+		
+		var setWinner = function (player) {
+			player.pointsEarned += pointTracker.getFirstSectionPoints();
+		}
+		
+		var evalEnvido = function (player) {
+			var opponent = playerManager.getOpponent(player);
+			var playerCardSet = new CommonAPI.CardSet(player.cards);
+			var opponentCardSet = new CommonAPI.CardSet(opponent.cards);
+			var playerScore = playerCardSet.calculateEnvido();
+			var opponentScore = playerCardSet.calculateEnvido();
+			
+			if(playerScore > opponentScore) {
+				setWinner(player);
+			}
+			else if(playerScore < opponentScore) {
+				setWinner(opponent);
+			}
+			else {
+				setWinner(playerManager.getHandPlayer());
+			}
+		}
+		
+		this.playEnvido = function (player, node) {
+			if(node.type == ReplyType.FirstSectionQuiero) {
+				evalEnvido(player);
+			}
+			else if(node.type == ReplyType.FirstSectionNoQuiero) {
+				setWinner(player);
+			}
+		}
+	}
+	
+	/*
+	 * Procesamiento del juego de cartas
+	 */
+	var CardPlayingProcessor = function (player1, player2, pointTracker) {
 		var _cardSet = new CommonAPI.CardSet();
 		var _handPoints = [100, 50, 100];
 		var _nextPlayer = player1.isHand? player1: player2;
@@ -507,13 +667,18 @@ var Server = new function () {
 			var max = Math.max(player1.trucoCicle.score, player2.trucoCicle.score);
 			if(max >= 150) {
 				var player = player1.trucoCicle.score==max? player1: player2;
-				player.trucoCicle.isWinner = true;
+				setWinner(player);
 				_nextPlayer = null;
 			}
 		}
 		
 		var switchPlayer = function () {
 			_nextPlayer = _nextPlayer==player1? player2: player1;
+		}
+		
+		var setWinner = function (player) {
+			player.pointsEarned += pointTracker.getSecondSectionPoints();
+			_lastPlayer = null;
 		}
 		
 		this.playCard = function (player, card) {
@@ -530,7 +695,7 @@ var Server = new function () {
 		}
 		
 		this.closeHand = function (player) {
-			player.trucoCicle.isWinner = true;
+			setWinner(player);
 		}
 		
 		this.getNextPlayer = function () {
@@ -538,88 +703,214 @@ var Server = new function () {
 		}
 	}
 	
+	/*
+	 * Datos de estado del jugador
+	 */
 	var PlayerData = function (playerHandler) {
-		this.envidoScore = 0;
+
+		/*
+		 * datos generales
+		 */ 
 		this.pointsEarned = 0;
 		this.isHand = false;
+		this.cards = [];
+
+		
+		/*
+		 * datos para uso interno en el procesamiento de la segunda sección (truco)
+		 */
 		this.trucoCicle = {
 			score: 0,
-			isWinner: false,
 			currentCard: null
 		};
+		
+		/*
+		 * estados para los requerimientos o filtros de los nodos
+		 */
 		this.state = {
 			hasQuiero: true,
 			firstSectionIsOpen: true
 		}
+		
+		/*
+		 * jugador concreto
+		 */
 		this.handler = playerHandler;
+		
+		/*
+		 * establece al jugador como mano
+		 */
 		this.setAsHand = function () {
 			this.isHand = true;
 			this.trucoCicle.score = 1;
-		} 
+		}
+		
+		this.revokeHand = function () {
+			this.isHand = false;
+			this.trucoCicle.score = 0;
+		}
+		
+		this.setCards = function (cards) {
+			this.cards = _utils.copyArray(cards);
+		}
+		
+		this.clearHand = function () {
+			this.trucoCicle = {
+				score: 0,
+				currentCard: null
+			};
+			this.state = {
+				hasQuiero: true,
+				firstSectionIsOpen: true
+			};
+			this.cards = [];
+		}
 	}
 	
+	/*
+	 * Maneja los estados del jugador (PlayerData.state)
+	 * Centraliza el manejo de turnos
+	 */
 	var PlayerManager = function (player1, player2) {
-		var _currentPlayer = player1.isHand? player1: (player2.isHand? player2: null);
-		if(!_currentPlayer) {
-			throw new Error("No hand player");
+		
+		var _currentPlayer;
+
+		var init = function () {
+			_currentPlayer = getHandPlayer();
+			if(!_currentPlayer) {
+				throw new Error("No hand player");
+			}
 		}
+		
+		var switchHandPlayer = function () {
+			var currentHand = getHandPlayer();
+			var nextHand = getOpponent(currentHand);
+			currentHand.revokeHand();
+			nextHand.setAsHand();
+		}
+		
+		var getOpponent = function (player) {
+			return player==player1? player2: (player==player2? player1: null);
+		}
+		
+		var getHandPlayer = getHandPlayer = function () {
+			return player1.isHand? player1: (player2.isHand? player2: null);
+		}
+		init();
 
 		this.setNextPlayer = function (player) {
 			_currentPlayer = player;
 		}
+		
+		this.getHandPlayer = getHandPlayer;
+		
+		this.getOpponent = getOpponent;
+		
 		this.switchPlayer = function () {
-			_currentPlayer = _currentPlayer==player1? player2: player1;
+			_currentPlayer = getOpponent(_currentPlayer);
 		}
+		
 		this.getNextPlayer = function () {
 			return _currentPlayer;
 		}
+		
 		this.setupQuiero = function (player) {
 			player.state.hasQuiero = false;
-			var theOtherPlayer = player==player1? player2: player1;
-			theOtherPlayer.state.hasQuiero = true;
+			getOpponent(player).state.hasQuiero = true;
 		}
+		
 		this.closeFirstSection = function (player) {
 			player.state.firstSectionIsOpen = false;
 		}
+		
 		this.openFirstSection = function (player) {
-			var theOtherPlayer = player==player1? player2: player1;
-			theOtherPlayer.state.firstSectionIsOpen = true;
+			getOpponent(player).state.firstSectionIsOpen = true;
 		}
+		
 		this.closeSecondSection = function () {
 			_currentPlayer = null;
 		}
+		
+		this.getPlayer1 = function () {
+			return player1;
+		}
+		
+		this.getPlayer2 = function () {
+			return player2;
+		}
+		
+		this.newHand = function () {
+			player1.clearHand();
+			player2.clearHand();
+			switchHandPlayer();
+			init();
+		}
 	}
 	
-	this.GameManager = function (player1, player2) {
-		var _player1 = new PlayerData(player1);
-		var _player2 = new PlayerData(player2);
+	this.GameManager = function (playerHandler1, playerHandler2) {
+		var _player1 = new PlayerData(playerHandler1);
+		var _player2 = new PlayerData(playerHandler2);
 		_player1.setAsHand();
 		
-		var _cardProcessor = new CardPlayingProcessor(_player1, _player2);
+		var _pointCount = new PointTracker();
+		var _cardProcessor = new CardPlayingProcessor(_player1, _player2, _pointCount);
 		var _playerManager = new PlayerManager(_player1, _player2);
-		var _runner = new ActionRunner(_playerManager, _cardProcessor);
-		var _deck = new NSDeck.SpanishDeck(new NSDeck.DeckShuffler());
+		var _envidoProcessor = new EnvidoProcessor(_playerManager, _pointCount);
+		var _runner = new ActionRunner(_playerManager, _cardProcessor, _envidoProcessor, _pointCount);
+		
 		
 		var dealCards = function () {
+			var _deck = new NSDeck.SpanishDeck(new NSDeck.DeckShuffler());
 			_deck.shuffle();
-			player1.initHand(_deck.takeCard(3));
-			player2.initHand(_deck.takeCard(3));
+			var cards1 = _deck.takeCard(3);
+			var cards2 = _deck.takeCard(3);
+			_player1.handler.initHand(cards1);
+			_player2.handler.initHand(cards2);
+			_player1.setCards(cards1);
+			_player2.setCards(cards2);
 		}
 		dealCards();
 
-		var nextPlayer;
-		while(nextPlayer = _playerManager.getNextPlayer()) {
-			_runner.setNextPlayer(nextPlayer);
-			var actions = _runner.getActions();
-			if(actions.isEmpty()) {
-				break;
+
+		var endOfHand = function () {
+			showLog();
+			_playerManager.newHand();
+			var _pointCount = new PointTracker();
+			var _cardProcessor = new CardPlayingProcessor(_player1, _player2, _pointCount);
+			_runner = new ActionRunner(_playerManager, _cardProcessor, _envidoProcessor, _pointCount);
+			dealCards();
+			//clearInterval(interval);
+		}
+		var interval = setInterval(function() {
+			var nextPlayer = _playerManager.getNextPlayer();
+			if(nextPlayer) {
+				_runner.setNextPlayer(nextPlayer);
+				var actions = _runner.getActions();
+				if(actions.isEmpty()) {
+					endOfHand();
+				}
+				else {
+					var action = nextPlayer.handler.play(actions);
+					if(!_runner.execute(action)) {
+						endOfHand();
+					}
+				}
 			}
-			var action = nextPlayer.handler.play(actions);
-			if(!_runner.execute(action)) {
-				break;
+			else {
+				endOfHand();
 			}
-		};
-		alert((_player1.trucoCicle.isWinner? _player1.handler.name: (_player2.trucoCicle.isWinner? _player2.handler.name: "ERROR")) + " Win");
+		}, 100);
+		
+
+		var showLog = function () {
+			var log = {};
+			log["-----------------------------"] = "------------------------------<br>";
+			log["--" + _player1.handler.name] = _player1.pointsEarned;
+			log["--" + _player2.handler.name] = _player2.pointsEarned;
+			Log.add(log);
+			Log.add({"-----------------------------": "------------------------------<br>"});
+		}
+		
 	}
 }
 	
