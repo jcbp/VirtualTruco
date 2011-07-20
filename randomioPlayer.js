@@ -34,9 +34,9 @@ var RandomPlayer = function (name) {
 			objLog[nodeName] = node;
 			_allMyOptions.push(nodeName);
 		});
-		
-		Log.add(objLog);
-		
+
+//		Log.add(objLog);
+
 		_randOption = this.getRandomOption(_allMyOptions);
 		
 		switch(_randOption) {

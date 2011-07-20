@@ -94,6 +94,10 @@ var Utils = function () {
 		return obj;
 	};
 	
+	this.copyArray = function (array) {
+		return ([]).concat(array);
+	}
+	
 	this.EventManager = function () {
 		var _events = {};
 		this.add = function (eventName, callback) {

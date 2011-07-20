@@ -3,6 +3,9 @@
  */
 var Player2 = function () {
 var actionMove = [
+	CommonAPI.ENVIDO,
+	CommonAPI.QUIERO,
+	CommonAPI.TRUCO,
 	CommonAPI.PLAY_CARD,
 	CommonAPI.PLAY_CARD,
 	CommonAPI.PLAY_CARD,

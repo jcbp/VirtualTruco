@@ -599,6 +599,14 @@ var Server = new function () {
 	var EnvidoProcessor = function (playerManager, pointTracker) {
 		
 		var setWinner = function (player) {
+			
+			Log.add({"Gano el tanto": player.handler.name});
+			var log={};
+			log[player.handler.name] = (new CommonAPI.CardSet(player.cards)).calculateEnvido();
+			var opponent = playerManager.getOpponent(player);
+			log[opponent.handler.name] = (new CommonAPI.CardSet(opponent.cards)).calculateEnvido();
+			Log.add(log);
+			
 			player.pointsEarned += pointTracker.getFirstSectionPoints();
 		}
 		
@@ -607,7 +615,7 @@ var Server = new function () {
 			var playerCardSet = new CommonAPI.CardSet(player.cards);
 			var opponentCardSet = new CommonAPI.CardSet(opponent.cards);
 			var playerScore = playerCardSet.calculateEnvido();
-			var opponentScore = playerCardSet.calculateEnvido();
+			var opponentScore = opponentCardSet.calculateEnvido();
 			
 			if(playerScore > opponentScore) {
 				setWinner(player);
@@ -625,7 +633,7 @@ var Server = new function () {
 				evalEnvido(player);
 			}
 			else if(node.type == ReplyType.FirstSectionNoQuiero) {
-				setWinner(player);
+				setWinner(playerManager.getOpponent(player));
 			}
 		}
 	}
@@ -633,15 +641,11 @@ var Server = new function () {
 	/*
 	 * Procesamiento del juego de cartas
 	 */
-	var CardPlayingProcessor = function (player1, player2, pointTracker) {
+	var CardPlayingProcessor = function (playerManager, pointTracker) {
 		var _cardSet = new CommonAPI.CardSet();
 		var _handPoints = [100, 50, 100];
-		var _nextPlayer = player1.isHand? player1: player2;
+		var _nextPlayer = playerManager.getHandPlayer();
 		var _lastPlayer = null;
-		
-		var getHandPlayer = function () {
-			return player1.isHand? player1: player2;
-		}
 		
 		var evalHand = function (player1, player2) {
 			var cardWeight1 = _cardSet.getCardWeight(player1.trucoCicle.currentCard);
@@ -659,7 +663,7 @@ var Server = new function () {
 			else {
 				player1.trucoCicle.score += points;
 				player2.trucoCicle.score += points;
-				_nextPlayer = getHandPlayer();
+				_nextPlayer = playerManager.getHandPlayer();
 			}
 		}
 		
@@ -672,17 +676,19 @@ var Server = new function () {
 			}
 		}
 		
-		var switchPlayer = function () {
-			_nextPlayer = _nextPlayer==player1? player2: player1;
-		}
-		
 		var setWinner = function (player) {
+			Log.add({"Gano segunda parte": player.handler.name});
 			player.pointsEarned += pointTracker.getSecondSectionPoints();
 			_lastPlayer = null;
 		}
 		
 		this.playCard = function (player, card) {
 			player.trucoCicle.currentCard = card;
+			
+			if(_lastPlayer && (playerManager.getOpponent(_lastPlayer) != player)) {
+				Log.add({Error: "error en el cambio de turnos"});
+			}
+			
 			if(_lastPlayer) {
 				evalHand(_lastPlayer, player);
 				evalWinner(_lastPlayer, player);
@@ -690,7 +696,7 @@ var Server = new function () {
 			}
 			else {
 				_lastPlayer = player;
-				switchPlayer();
+				_nextPlayer = playerManager.getOpponent(_nextPlayer);
 			}
 		}
 		
@@ -853,8 +859,8 @@ var Server = new function () {
 		_player1.setAsHand();
 		
 		var _pointCount = new PointTracker();
-		var _cardProcessor = new CardPlayingProcessor(_player1, _player2, _pointCount);
 		var _playerManager = new PlayerManager(_player1, _player2);
+		var _cardProcessor = new CardPlayingProcessor(_playerManager, _pointCount);
 		var _envidoProcessor = new EnvidoProcessor(_playerManager, _pointCount);
 		var _runner = new ActionRunner(_playerManager, _cardProcessor, _envidoProcessor, _pointCount);
 		
@@ -876,7 +882,7 @@ var Server = new function () {
 			showLog();
 			_playerManager.newHand();
 			var _pointCount = new PointTracker();
-			var _cardProcessor = new CardPlayingProcessor(_player1, _player2, _pointCount);
+			var _cardProcessor = new CardPlayingProcessor(_playerManager, _pointCount);
 			_runner = new ActionRunner(_playerManager, _cardProcessor, _envidoProcessor, _pointCount);
 			dealCards();
 			//clearInterval(interval);
@@ -899,16 +905,16 @@ var Server = new function () {
 			else {
 				endOfHand();
 			}
-		}, 100);
+		}, 500);
 		
 
 		var showLog = function () {
 			var log = {};
-			log["-----------------------------"] = "------------------------------<br>";
+			log["-----------------------"] = "------------------------------<br>";
 			log["--" + _player1.handler.name] = _player1.pointsEarned;
 			log["--" + _player2.handler.name] = _player2.pointsEarned;
 			Log.add(log);
-			Log.add({"-----------------------------": "------------------------------<br>"});
+			Log.add({"-----------------------": "------------------------------<br>"});
 		}
 		
 	}
