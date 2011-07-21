@@ -528,17 +528,73 @@ var Server = new function () {
 		}
 	}
 	
+	var GameHistory = function (name, player1, player2) {
+		var getDate = function () {
+			var date = new Date();
+			return date.toUTCString();
+		}
+		var _history = {
+			head: {
+				name: name,
+				date: getDate(),
+				player1: player1.handler.name,
+				player2: player2.handler.name
+			},
+			body: []
+		};
+		
+		this.addHand = function (handHistory) {
+			_history.body.push(handHistory.get());
+		}
+		
+		this.get = function () {
+			return _history;
+		}
+	}
+	
+	var HandHistory = function (player1, player2) {
+		var _history = {
+			player1: {
+				name: player1.handler.name,
+				isHand: player1.isHand,
+				pointsEarned: 0					
+			},
+			player2: {
+				name: player2.handler.name,
+				isHand: player2.isHand,
+				pointsEarned: 0
+			},
+			actionStack: []
+		};
+		
+		this.addAction = function (player, action) {
+			_history.actionStack.push({
+				action: action,
+				playerName: player.handler.name					
+			});
+		}
+		
+		this.close = function () {
+			_history.player1.pointsEarned = player1.pointsEarned;
+			_history.player2.pointsEarned = player2.pointsEarned;
+		}
+		
+		this.get = function () {
+			return _history;	
+		}
+	}
+	
 	/*
 	 * Ejecuta las acciones realizadas por los jugadores
 	 */
-	var ActionRunner = function (playerManager, cardProcessor, envidoProcessor, pointTracker) {
+	var ActionRunner = function (playerManager, cardProcessor, envidoProcessor, pointTracker, handHistory) {
 		var _playCardBranch = new Branch();
 		var _trucoBranch = new Branch();
 		var _envidoBranch = new Branch();
 		var _currentNode = new RootNode(_playCardBranch, _trucoBranch, _envidoBranch);
 		var _childNodes;
 		var _currentPlayer;
-
+		
 		this.execute = function(action) {
 			playerManager.closeFirstSection(_currentPlayer);
 			if(!_childNodes) {
@@ -579,6 +635,7 @@ var Server = new function () {
 					playerManager.setNextPlayer(cardProcessor.getNextPlayer());
 					break;
 			}
+			handHistory.addAction(_currentPlayer, action);
 			return _currentNode;
 		}
 		this.setNextPlayer = function (player) {
@@ -865,7 +922,9 @@ var Server = new function () {
 		var _playerManager = new PlayerManager(_player1, _player2);
 		var _cardProcessor = new CardPlayingProcessor(_playerManager, _pointCount);
 		var _envidoProcessor = new EnvidoProcessor(_playerManager, _pointCount);
-		var _runner = new ActionRunner(_playerManager, _cardProcessor, _envidoProcessor, _pointCount);
+		var _handHistory = new HandHistory(_player1, _player2);
+		var _runner = new ActionRunner(_playerManager, _cardProcessor, _envidoProcessor, _pointCount, _handHistory);
+		var _gameHistory = new GameHistory("ALTA PARTIDA", _player1, _player2);
 		
 		
 		var dealCards = function () {
@@ -882,16 +941,24 @@ var Server = new function () {
 
 
 		var endOfHand = function () {
+			_handHistory.close();
+			_gameHistory.addHand(_handHistory);
+			_handHistory = new HandHistory(_player1, _player2);
+			
 			showLog();
+			
 			_playerManager.newHand();
 			_pointCount = new PointTracker();
 			_cardProcessor = new CardPlayingProcessor(_playerManager, _pointCount);
 			_envidoProcessor = new EnvidoProcessor(_playerManager, _pointCount);
-			_runner = new ActionRunner(_playerManager, _cardProcessor, _envidoProcessor, _pointCount);
+			_runner = new ActionRunner(_playerManager, _cardProcessor, _envidoProcessor, _pointCount, _handHistory);
 			if (_player1.pointsEarned < 30 && _player2.pointsEarned < 30)
 				dealCards();
 			else	
+			{
 				clearInterval(interval);
+				var loader = new HTTPLoader("http://aitruco.com.ar/add.php?p1="+_player1.handler.name+"&p2="+_player2.handler.name,"POST").load(_gameHistory.get());   
+			}
 		}
 		var interval = setInterval(function() {
 			var nextPlayer = _playerManager.getNextPlayer();
@@ -902,7 +969,7 @@ var Server = new function () {
 					endOfHand();
 				}
 				else {
-					var action = nextPlayer.handler.play(actions);
+					var action = nextPlayer.handler.play(actions, _handHistory.get().actionStack);
 					if(!_runner.execute(action)) {
 						endOfHand();
 					}
@@ -911,7 +978,7 @@ var Server = new function () {
 			else {
 				endOfHand();
 			}
-		}, 0);
+		}, 500);
 		
 
 		var showLog = function () {

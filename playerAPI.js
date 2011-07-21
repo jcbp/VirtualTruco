@@ -1,21 +1,34 @@
-var HTTPLoader = function(url,method,scope,func){
+
+
+
+
+var HTTPLoader = function(url, method, scope, func){
+	var _utils =  new Utils();
+	var _url = url;
     var _ready, _cancel;
-    var _cnn    =  window.XMLHttpRequest ? new XMLHttpRequest( ) : new ActiveXObject("Microsoft.XMLHTTP");    
+    var _cnn    =  window.XMLHttpRequest ? new XMLHttpRequest( ) : new ActiveXObject("Microsoft.XMLHTTP");
+    
     this.method =  method || "Post";  
     
     this.data = function(){
         return _cnn.responseText;
     }
     
-    this.load  = function(url){
+    this.load  = function(data){
         url = url || _url;
         if(!url)return;
         _cnn.open(this.method,url,true);
-        _cnn.send(null);
+        _cnn.setRequestHeader('Content-Type','application/x-www-form-urlencoded');    
+        _cnn.send(_utils.objectToQueryString({
+        	data: _utils.toJSONString(data)
+       	}));
     }
     
     this.setReadyCallback = function(scope,func){
-       _ready = {handler:func,scope:scope};
+       _ready = {
+	       	handler:func,
+	       	scope:scope
+       };
     }
     
     this.setCancelCallback = function(scope,func){
@@ -67,7 +80,7 @@ var Log = new function () {
     }
 
     this.save = function(p1,p2){        
-        new HTTPLoader("http://aitruco.com.ar/add.php?data="+escape(_output.innerHTML)+"&p1="+p1+"&p2="+p2,"Get").load();        
+             
     }
 }
 
@@ -77,8 +90,42 @@ var Log = new function () {
  */
 var Utils = function () {
 	
+	
+	
 	this.getLastElement = function (elements) {
 		return elements[elements.length - 1];
+	}
+	
+	this.objectToQueryString = function (obj){
+		var ret = "";
+		for(var i in obj)
+			ret += i + '=' + obj[i] + '&';
+		return ret.substring(0, ret.length-1)
+	}
+	
+	this.toJSONString = function (obj){
+		var str = "";
+		if (obj instanceof Array)
+		{
+			str += '[ ';
+			for(var i=0; i<obj.length; i++)
+				str += arguments.callee(obj[i]) + ', ';
+			if (str.length>2)
+				str = str.substring(0, str.length-2);
+			str += ' ]';
+		}
+		else if (obj instanceof Object)
+		{
+			str += '{ ';
+			for(var prop in obj)
+				str += '"' + prop + '": ' + arguments.callee(obj[prop]) + ', ';
+			if (str.length>2)
+				str = str.substring(0, str.length-2);
+			str += ' }';
+		}
+		else
+			str += ((obj||obj=="") && obj.constructor==String ? '"' + obj.replace(/"/g, '\\"').replace(/\r\n/g,"\\r\\n").replace(/\t/g,"") + '"' : obj);
+		return str;
 	}
 	
 	this.random = function (from, to) {
