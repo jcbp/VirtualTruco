@@ -107,21 +107,21 @@ var Utils = function () {
 		var str = "";
 		if (obj instanceof Array)
 		{
-			str += '[ ';
+			str += '[';
 			for(var i=0; i<obj.length; i++)
 				str += arguments.callee(obj[i]) + ', ';
 			if (str.length>2)
 				str = str.substring(0, str.length-2);
-			str += ' ]';
+			str += ']';
 		}
 		else if (obj instanceof Object)
 		{
-			str += '{ ';
+			str += '{';
 			for(var prop in obj)
-				str += '"' + prop + '": ' + arguments.callee(obj[prop]) + ', ';
+				str += '"' + prop + '":' + arguments.callee(obj[prop]) + ',';
 			if (str.length>2)
 				str = str.substring(0, str.length-2);
-			str += ' }';
+			str += '}';
 		}
 		else
 			str += ((obj||obj=="") && obj.constructor==String ? '"' + obj.replace(/"/g, '\\"').replace(/\r\n/g,"\\r\\n").replace(/\t/g,"") + '"' : obj);
