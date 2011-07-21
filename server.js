@@ -856,6 +856,9 @@ var Server = new function () {
 	this.GameManager = function (playerHandler1, playerHandler2) {
 		var _player1 = new PlayerData(playerHandler1);
 		var _player2 = new PlayerData(playerHandler2);
+		
+		
+		//_player2.setAsHand();
 		_player1.setAsHand();
 		
 		var _pointCount = new PointTracker();
@@ -881,11 +884,14 @@ var Server = new function () {
 		var endOfHand = function () {
 			showLog();
 			_playerManager.newHand();
-			var _pointCount = new PointTracker();
-			var _cardProcessor = new CardPlayingProcessor(_playerManager, _pointCount);
+			_pointCount = new PointTracker();
+			_cardProcessor = new CardPlayingProcessor(_playerManager, _pointCount);
+			_envidoProcessor = new EnvidoProcessor(_playerManager, _pointCount);
 			_runner = new ActionRunner(_playerManager, _cardProcessor, _envidoProcessor, _pointCount);
-			dealCards();
-			//clearInterval(interval);
+			if (_player1.pointsEarned < 30 && _player2.pointsEarned < 30)
+				dealCards();
+			else	
+				clearInterval(interval);
 		}
 		var interval = setInterval(function() {
 			var nextPlayer = _playerManager.getNextPlayer();
@@ -905,7 +911,7 @@ var Server = new function () {
 			else {
 				endOfHand();
 			}
-		}, 500);
+		}, 0);
 		
 
 		var showLog = function () {
