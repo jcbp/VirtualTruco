@@ -2,73 +2,6 @@
 /*
  * @Namespace
  */
-var NSDeck = new function () {
-	
-	var _utils = new Utils();
-	
-	/*
-	 * Define lo que es una carta, a partir del valor y el palo
-	 */
-	var Card = function (value, suit) {
-		this.value = value;
-		this.suit = suit;
-		this.toString = function () {
-			return value + " of " + suit;
-		}
-	};
-
-	/*
-	 * Mezclador de cartas
-	 */
-	this.DeckShuffler = function () {
-		this.shuffle = function (deck) {
-			var ret = [];
-			while(deck.length) {
-				ret.push(deck.splice(_utils.random(0, deck.length - 1), 1)[0]);
-			}
-			return ret;
-		}
-	}
-	
-	/*
-	 * Maso de cartas
-	 */
-	var Deck = this.Deck = function (values, suits, shuffler) {
-		var _cards = [];
-		
-		var init = function () {
-			for (var i=0; i < values.length; i++) {
-				for (var j=0; j < suits.length; j++) {
-					_cards.push(new Card(values[i], suits[j]));
-				};
-			};
-		}
-		init();
-		
-		this.shuffle = function () {
-			_cards = shuffler.shuffle(_cards);
-		}
-		this.takeCard = function (count) {
-			return _cards.splice(0, count);
-		}
-		this.takeBackCard = function (cards) {
-			_cards.concat(cards);
-		}
-	}
-	
-	/*
-	 * Se define el mazo de cartas españolas
-	 */
-	this.SpanishDeck = function (shuffler) {
-		var _deckValues = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
-		var _deckSuits = ["Cup", "Coin", "Club", "Sword"];
-		Deck.call(this, _deckValues, _deckSuits, shuffler);
-	}
-}
-
-/*
- * @Namespace
- */
 var Server = new function () {
 
 	/*
@@ -133,7 +66,8 @@ var Server = new function () {
 		FirstSectionQuiero: "FirstSectionQuiero",
 		FirstSectionNoQuiero: "FirstSectionNoQuiero",
 		SecondSectionQuiero: "SecondSectionQuiero",
-		SecondSectionNoQuiero: "SecondSectionNoQuiero"
+		SecondSectionNoQuiero: "SecondSectionNoQuiero",
+		FaltaEnvidoQuerido: "FaltaEnvidoQuerido"
 	};
 	
 	/*
@@ -356,6 +290,12 @@ var Server = new function () {
 		this.setAsEnumerable();
 	}
 	
+	var FaltaEnvidoQueridoNode = function (value, playCardBranch, trucoBranch) {
+		ReplyNode.apply(this, arguments);
+		this.type = ReplyType.FaltaEnvidoQuerido;
+		this.name = ReplyType.FaltaEnvidoQuerido;
+	}
+	
 	/*
 	 * Concrete Node FaltaEnvido
 	 */
@@ -364,10 +304,16 @@ var Server = new function () {
 		this.name = "FaltaEnvido";
 		
 		var _intrinsicValue = 6;
-		var _acceptedValue = previousValue + _intrinsicValue;
+		
+		// no es acumulativo con lo anterior
+		var _acceptedValue = _intrinsicValue;
 		var _declinedValue = previousValue || 1;
 		
 		this.setValues(_acceptedValue, _declinedValue);
+		
+		this.addNodes({
+			Quiero: new FaltaEnvidoQueridoNode(_acceptedValue, playCardBranch, trucoBranch)
+		});
 		
 		this.setAsEnumerable();
 	}
@@ -499,22 +445,46 @@ var Server = new function () {
 	}
 	
 	/*
+	 * Objeto que representa el puntaje obtenido en una apuesta
+	 */
+	var Score = function (playerManager, maxScore, initValue) {
+		
+		var _value = initValue;
+		var _isFaltaEnvido = false;
+		
+		this.setValue = function (value) {
+			_value = value;
+		}
+		
+		this.setFaltaEnvido = function () {
+			_isFaltaEnvido = true;
+		}
+		
+		this.getValue = function (player) {
+			return _isFaltaEnvido? (maxScore - playerManager.getOpponent(player).pointsEarned): _value;
+		}
+	}
+
+	/*
 	 * Se realiza el seguimiento de puntos de cada apuesta.
 	 * Los puntos no son asignados a ningun jugador, solo se va guardando hasta donde se levantó las apuestas
 	 */
-	var PointTracker = function () {
-		var _firstSectionPoints = 0;
-		var _secondSectionPoints = 1;
+	var PointTracker = function (playerManager, maxScore) {
+		var _firstSectionPoints = new Score(playerManager, maxScore, 0);
+		var _secondSectionPoints = new Score(playerManager, maxScore, 1);
 		
 		this.evaluateNode = function (node) {
 			switch(node.type) {
 				case ReplyType.FirstSectionQuiero:
 				case ReplyType.FirstSectionNoQuiero:
-					_firstSectionPoints = node.value;
+					_firstSectionPoints.setValue(node.value);
+					break;
+				case ReplyType.FaltaEnvidoQuerido:
+					_firstSectionPoints.setFaltaEnvido();
 					break;
 				case ReplyType.SecondSectionQuiero:
 				case ReplyType.SecondSectionNoQuiero:
-					_secondSectionPoints = node.value;
+					_secondSectionPoints.setValue(node.value);
 					break;
 			}
 		}
@@ -544,7 +514,10 @@ var Server = new function () {
 		};
 		
 		this.addHand = function (handHistory) {
-			_history.body.push(handHistory.get());
+			var handHistObj = handHistory.get();
+			if(!handHistObj.isEmpty) {
+				_history.body.push(handHistObj);
+			}
 		}
 		
 		this.get = function () {
@@ -564,7 +537,8 @@ var Server = new function () {
 				isHand: player2.isHand,
 				pointsEarned: 0
 			},
-			actionStack: []
+			actionStack: [],
+			isEmpty: true
 		};
 		
 		this.addAction = function (player, action) {
@@ -572,6 +546,7 @@ var Server = new function () {
 				action: action,
 				playerName: player.handler.name					
 			});
+			_history.isEmpty = false;
 		}
 		
 		this.close = function () {
@@ -657,14 +632,14 @@ var Server = new function () {
 		
 		var setWinner = function (player) {
 			
-			Log.add({"Gano el tanto": player.handler.name});
 			var log={};
-			log[player.handler.name] = (new CommonAPI.CardSet(player.cards)).calculateEnvido();
+			log["Tanto de " + player.handler.name] = (new CommonAPI.CardSet(player.cards)).calculateEnvido();
 			var opponent = playerManager.getOpponent(player);
-			log[opponent.handler.name] = (new CommonAPI.CardSet(opponent.cards)).calculateEnvido();
+			log["Tanto de " + opponent.handler.name] = (new CommonAPI.CardSet(opponent.cards)).calculateEnvido();
 			Log.add(log);
+			Log.add({"Gano el tanto": player.handler.name});
 			
-			player.pointsEarned += pointTracker.getFirstSectionPoints();
+			player.pointsEarned += pointTracker.getFirstSectionPoints().getValue(player);
 		}
 		
 		var evalEnvido = function (player) {
@@ -686,7 +661,7 @@ var Server = new function () {
 		}
 		
 		this.playEnvido = function (player, node) {
-			if(node.type == ReplyType.FirstSectionQuiero) {
+			if(node.type == ReplyType.FirstSectionQuiero || node.type == ReplyType.FaltaEnvidoQuerido) {
 				evalEnvido(player);
 			}
 			else if(node.type == ReplyType.FirstSectionNoQuiero) {
@@ -705,29 +680,29 @@ var Server = new function () {
 		var _lastPlayer = null;
 		
 		var evalHand = function (player1, player2) {
-			var cardWeight1 = _cardSet.getCardWeight(player1.trucoCicle.currentCard);
-			var cardWeight2 = _cardSet.getCardWeight(player2.trucoCicle.currentCard);
+			var cardWeight1 = _cardSet.getCardWeight(player1.trucoCycle.currentCard);
+			var cardWeight2 = _cardSet.getCardWeight(player2.trucoCycle.currentCard);
 			var points = _handPoints.pop();
 			
 			if(cardWeight1 < cardWeight2) {
-				player1.trucoCicle.score += points;
+				player1.trucoCycle.score += points;
 				_nextPlayer = player1;
 			}
 			else if(cardWeight1 > cardWeight2) {
-				player2.trucoCicle.score += points;
+				player2.trucoCycle.score += points;
 				_nextPlayer = player2;
 			}
 			else {
-				player1.trucoCicle.score += points;
-				player2.trucoCicle.score += points;
+				player1.trucoCycle.score += points;
+				player2.trucoCycle.score += points;
 				_nextPlayer = playerManager.getHandPlayer();
 			}
 		}
 		
 		var evalWinner = function (player1, player2) {
-			var max = Math.max(player1.trucoCicle.score, player2.trucoCicle.score);
+			var max = Math.max(player1.trucoCycle.score, player2.trucoCycle.score);
 			if(max >= 150) {
-				var player = player1.trucoCicle.score==max? player1: player2;
+				var player = player1.trucoCycle.score==max? player1: player2;
 				setWinner(player);
 				_nextPlayer = null;
 			}
@@ -735,12 +710,12 @@ var Server = new function () {
 		
 		var setWinner = function (player) {
 			Log.add({"Gano segunda parte": player.handler.name});
-			player.pointsEarned += pointTracker.getSecondSectionPoints();
+			player.pointsEarned += pointTracker.getSecondSectionPoints().getValue(player);
 			_lastPlayer = null;
 		}
 		
 		this.playCard = function (player, card) {
-			player.trucoCicle.currentCard = card;
+			player.trucoCycle.currentCard = card;
 			
 			if(_lastPlayer && (playerManager.getOpponent(_lastPlayer) != player)) {
 				Log.add({Error: "error en el cambio de turnos"});
@@ -782,7 +757,7 @@ var Server = new function () {
 		/*
 		 * datos para uso interno en el procesamiento de la segunda sección (truco)
 		 */
-		this.trucoCicle = {
+		this.trucoCycle = {
 			score: 0,
 			currentCard: null
 		};
@@ -805,12 +780,12 @@ var Server = new function () {
 		 */
 		this.setAsHand = function () {
 			this.isHand = true;
-			this.trucoCicle.score = 1;
+			this.trucoCycle.score = 1;
 		}
 		
 		this.revokeHand = function () {
 			this.isHand = false;
-			this.trucoCicle.score = 0;
+			this.trucoCycle.score = 0;
 		}
 		
 		this.setCards = function (cards) {
@@ -818,7 +793,7 @@ var Server = new function () {
 		}
 		
 		this.clearHand = function () {
-			this.trucoCicle = {
+			this.trucoCycle = {
 				score: 0,
 				currentCard: null
 			};
@@ -839,6 +814,10 @@ var Server = new function () {
 		var _currentPlayer;
 
 		var init = function () {
+			_currentPlayer = getHandPlayer();
+			if(!_currentPlayer) {
+				player1.setAsHand();
+			}
 			_currentPlayer = getHandPlayer();
 			if(!_currentPlayer) {
 				throw new Error("No hand player");
@@ -910,87 +889,125 @@ var Server = new function () {
 		}
 	}
 	
-	this.GameManager = function (playerHandler1, playerHandler2) {
-		var _player1 = new PlayerData(playerHandler1);
-		var _player2 = new PlayerData(playerHandler2);
+	this.GameConfig = function () {
+		this.name = name;
+		this.playRate = 500;
+		this.maxScore = 30;
+	}
+	
+	this.GameManager = function (config, playerHandler1, playerHandler2) {
 		
+		var _player1;
+		var _player2;
+		var _playerManager;
+		var _gameHistory;
+		var _pointCount;
+		var _cardProcessor;
+		var _envidoProcessor;
+		var _handHistory;
+		var _runner;
+		var _interval;
 		
-		//_player2.setAsHand();
-		_player1.setAsHand();
+		// temp
+		var showLog = function () {
+			var log = {};
+			log["-----------------------"] = "------------------------------<br>";
+			log["--" + _player1.handler.name] = _player1.pointsEarned + (_player1.isHand? " (hand player)": "");
+			log["--" + _player2.handler.name] = _player2.pointsEarned + (_player2.isHand? " (hand player)": "");
+			Log.add(log);
+			Log.add({"-----------------------": "------------------------------<br>"});
+		}
 		
-		var _pointCount = new PointTracker();
-		var _playerManager = new PlayerManager(_player1, _player2);
-		var _cardProcessor = new CardPlayingProcessor(_playerManager, _pointCount);
-		var _envidoProcessor = new EnvidoProcessor(_playerManager, _pointCount);
-		var _handHistory = new HandHistory(_player1, _player2);
-		var _runner = new ActionRunner(_playerManager, _cardProcessor, _envidoProcessor, _pointCount, _handHistory);
-		var _gameHistory = new GameHistory("ALTA PARTIDA", _player1, _player2);
-		
+		var init = function () {
+			_player1 = new PlayerData(playerHandler1);
+			_player2 = new PlayerData(playerHandler2);
+			_playerManager = new PlayerManager(_player1, _player2);
+			_gameHistory = new GameHistory(getGameName(), _player1, _player2);
+			
+			nextHand();
+		}
 		
 		var dealCards = function () {
+			var cards1, cards2;
 			var _deck = new NSDeck.SpanishDeck(new NSDeck.DeckShuffler());
 			_deck.shuffle();
-			var cards1 = _deck.takeCard(3);
-			var cards2 = _deck.takeCard(3);
+			cards1 = _deck.takeCard(3);
+			cards2 = _deck.takeCard(3);
 			_player1.handler.initHand(cards1);
 			_player2.handler.initHand(cards2);
 			_player1.setCards(cards1);
 			_player2.setCards(cards2);
 		}
-		dealCards();
-
-
-		var endOfHand = function () {
-			_handHistory.close();
-			_gameHistory.addHand(_handHistory);
-			_handHistory = new HandHistory(_player1, _player2);
+		
+		var getGameName = function () {
+			return config.name + " - " + playerHandler1.name + " VS. " + playerHandler2.name;
+		}
+		
+		var nextHand = function () {
 			
+			// temp
 			showLog();
 			
 			_playerManager.newHand();
-			_pointCount = new PointTracker();
+			dealCards();
+			
+			_handHistory = new HandHistory(_player1, _player2);
+			_pointCount = new PointTracker(_playerManager, config.maxScore);
 			_cardProcessor = new CardPlayingProcessor(_playerManager, _pointCount);
 			_envidoProcessor = new EnvidoProcessor(_playerManager, _pointCount);
 			_runner = new ActionRunner(_playerManager, _cardProcessor, _envidoProcessor, _pointCount, _handHistory);
-			if (_player1.pointsEarned < 30 && _player2.pointsEarned < 30)
-				dealCards();
-			else	
-			{
-				clearInterval(interval);
-				var loader = new HTTPLoader("http://aitruco.com.ar/add.php?p1="+_player1.handler.name+"&p2="+_player2.handler.name,"POST").load(_gameHistory.get());   
-			}
 		}
-		var interval = setInterval(function() {
+		
+		var isMaxScore = function (max) {
+			return _player1.pointsEarned >= max || _player2.pointsEarned >= max;
+		}
+		
+		var sendGameData = function () {
+			//var loader = new HTTPLoader("http://aitruco.com.ar/add.php?p1="+_player1.handler.name+"&p2="+_player2.handler.name,"POST").load(_gameHistory.get());
+		}
+		
+		var endGame = function () {
+			
+			// temp
+			showLog();
+			
+			clearInterval(_interval);
+			sendGameData();
+		}
+
+		var gameLoop = function () {
 			var nextPlayer = _playerManager.getNextPlayer();
 			if(nextPlayer) {
 				_runner.setNextPlayer(nextPlayer);
 				var actions = _runner.getActions();
 				if(actions.isEmpty()) {
-					endOfHand();
+					nextHand();
 				}
 				else {
 					var action = nextPlayer.handler.play(actions, _handHistory.get().actionStack);
-					if(!_runner.execute(action)) {
-						endOfHand();
+					var currentHand = _runner.execute(action);
+					
+					if(isMaxScore(config.maxScore)) {
+						endGame();
 					}
+					else if(!currentHand) {
+						nextHand();
+					}
+					
 				}
 			}
 			else {
-				endOfHand();
+				nextHand();
 			}
-		}, 500);
-		
-
-		var showLog = function () {
-			var log = {};
-			log["-----------------------"] = "------------------------------<br>";
-			log["--" + _player1.handler.name] = _player1.pointsEarned;
-			log["--" + _player2.handler.name] = _player2.pointsEarned;
-			Log.add(log);
-			Log.add({"-----------------------": "------------------------------<br>"});
 		}
+		
+		// instantiate classes
+		init();
+		
+		// start
+		_interval = setInterval(gameLoop, config.playRate);
 		
 	}
 }
 	
-new Server.GameManager(new RandomPlayer("Randomio"), new RandomPlayer("Randamia"));
+new Server.GameManager(new Server.GameConfig("AI Truco Championship"), new RandomPlayer("Randomio"), new RandomPlayer("Randamia"));
