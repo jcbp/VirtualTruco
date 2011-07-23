@@ -78,14 +78,14 @@ var RandomPlayer = function (name) {
 				break;
 		}
 		
-		for (var i=0; i < lastActions.length; i++) {
+		/* for (var i=0; i < lastActions.length; i++) {
 			Log.add({
 				actionType: lastActions[i].action.type,
 				actionMessage: (lastActions[i].action.message || {}).name,
 				actionCard: (lastActions[i].action.card || null) + "",
 				playerName: lastActions[i].player
 			});
-		};
+		}; */
 		Log.add({
 			Juega: playerName,
 			Message: action.message? action.message.name: action.card
