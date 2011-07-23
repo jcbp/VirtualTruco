@@ -530,12 +530,14 @@ var Server = new function () {
 			player1: {
 				name: player1.handler.name,
 				isHand: player1.isHand,
-				pointsEarned: 0					
+				pointsEarned: 0,
+				cards: player1.cards					
 			},
 			player2: {
 				name: player2.handler.name,
 				isHand: player2.isHand,
-				pointsEarned: 0
+				pointsEarned: 0,
+				cards: player2.cards
 			},
 			actionStack: [],
 			isEmpty: true
