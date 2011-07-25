@@ -18,7 +18,7 @@ var HTTPLoader = function(url, method, scope, func){
         _cnn.open(this.method,url,true);
         _cnn.setRequestHeader('Content-Type','application/x-www-form-urlencoded');    
         _cnn.send(_utils.objectToQueryString({
-        	data: _utils.toJSONString(data)
+        	data: JSON.stringify(data)
        	}));
     }
     
@@ -99,34 +99,6 @@ var Utils = function () {
 		for(var i in obj)
 			ret += i + '=' + obj[i] + '&';
 		return ret.substring(0, ret.length-1)
-	}
-	
-	this.toJSONString = function (obj){
-		var str = "";
-		if (obj instanceof Array)
-		{
-			str += '[';
-			for(var i=0; i<obj.length; i++)
-				str += arguments.callee(obj[i]) + ', ';
-			if (str.length>2)
-				str = str.substring(0, str.length-2);
-			str += ']';
-		}
-		else if (obj instanceof Object)
-		{
-			str += '{';
-			for(var prop in obj) {
-				if(obj.hasOwnProperty(prop)) {
-					str += '"' + prop + '":' + arguments.callee(obj[prop]) + ',';
-				}
-			}
-			if (str.length>2)
-				str = str.substring(0, str.length-2);
-			str += '}';
-		}
-		else
-			str += ((obj||obj=="") && obj.constructor==String ? '"' + obj.replace(/"/g, '\\"').replace(/\r\n/g,"\\r\\n").replace(/\t/g,"") + '"' : obj);
-		return str;
 	}
 	
 	this.random = function (from, to) {
