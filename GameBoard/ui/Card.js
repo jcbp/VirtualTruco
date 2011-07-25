@@ -12,9 +12,12 @@ var Card = function (rank, suit, depth, backImg) {
 	el.style.zIndex = depth;
 	el.style.backgroundImage = "url(img/baraja.png)";
 	el.style.backgroundRepeat = "no-repeat";
-	//el.style.backgroundPosition = -1344 + "px " + -backImg * 172 + "px";
 	el.style.width = "112px";
 	el.style.height = "172px";
+	
+	el.getDepth = function() {
+		return this.style.zIndex;
+	};
 	
 	el.setDepth = function(depth) {
 		this.style.zIndex = depth;
