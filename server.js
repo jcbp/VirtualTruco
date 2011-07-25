@@ -507,8 +507,8 @@ var Server = new function () {
 			head: {
 				name: name,
 				date: getDate(),
-				player1: player1.handler.name,
-				player2: player2.handler.name
+				player1: player1.handler.getName(),
+				player2: player2.handler.getName()
 			},
 			body: []
 		};
@@ -528,13 +528,13 @@ var Server = new function () {
 	var HandHistory = function (player1, player2) {
 		var _history = {
 			player1: {
-				name: player1.handler.name,
+				name: player1.handler.getName(),
 				isHand: player1.isHand,
 				pointsEarned: 0,
-				cards: player1.cards					
+				cards: player1.cards
 			},
 			player2: {
-				name: player2.handler.name,
+				name: player2.handler.getName(),
 				isHand: player2.isHand,
 				pointsEarned: 0,
 				cards: player2.cards
@@ -542,11 +542,11 @@ var Server = new function () {
 			actionStack: [],
 			isEmpty: true
 		};
-		
+
 		this.addAction = function (player, action) {
 			_history.actionStack.push({
 				action: action,
-				playerName: player.handler.name					
+				playerName: player.handler.getName()
 			});
 			_history.isEmpty = false;
 		}
@@ -557,7 +557,7 @@ var Server = new function () {
 		}
 		
 		this.get = function () {
-			return _history;	
+			return _history;
 		}
 	}
 	
@@ -635,13 +635,16 @@ var Server = new function () {
 		var setWinner = function (player) {
 			
 			var log={};
-			log["Tanto de " + player.handler.name] = (new CommonAPI.CardSet(player.cards)).calculateEnvido();
+			log["Tanto de " + player.handler.getName()] = (new CommonAPI.CardSet(player.cards)).calculateEnvido();
 			var opponent = playerManager.getOpponent(player);
-			log["Tanto de " + opponent.handler.name] = (new CommonAPI.CardSet(opponent.cards)).calculateEnvido();
+			log["Tanto de " + opponent.handler.getName()] = (new CommonAPI.CardSet(opponent.cards)).calculateEnvido();
 			Log.add(log);
-			Log.add({"Gano el tanto": player.handler.name});
+			Log.add({"Gano el tanto": player.handler.getName()});
 			
 			player.pointsEarned += pointTracker.getFirstSectionPoints().getValue(player);
+			
+			player.handler.fireEvent("ownScoreChange", {score: player.pointsEarned});
+			playerManager.getOpponent(player).handler.fireEvent("opponentScoreChange", {score: player.pointsEarned});
 		}
 		
 		var evalEnvido = function (player) {
@@ -682,22 +685,23 @@ var Server = new function () {
 		var _lastPlayer = null;
 		
 		var evalHand = function (player1, player2) {
-			var cardWeight1 = _cardSet.getCardWeight(player1.trucoCycle.currentCard);
-			var cardWeight2 = _cardSet.getCardWeight(player2.trucoCycle.currentCard);
+			var result = _cardSet.compareWeight(player1.trucoCycle.currentCard, player2.trucoCycle.currentCard);
 			var points = _handPoints.pop();
-			
-			if(cardWeight1 < cardWeight2) {
-				player1.trucoCycle.score += points;
-				_nextPlayer = player1;
-			}
-			else if(cardWeight1 > cardWeight2) {
-				player2.trucoCycle.score += points;
-				_nextPlayer = player2;
-			}
-			else {
-				player1.trucoCycle.score += points;
-				player2.trucoCycle.score += points;
-				_nextPlayer = playerManager.getHandPlayer();
+
+			switch(result) {
+				case _cardSet.CompareWeightType.Lower:
+					player2.trucoCycle.score += points;
+					_nextPlayer = player2;
+					break;
+				case _cardSet.CompareWeightType.Equal:
+					player1.trucoCycle.score += points;
+					player2.trucoCycle.score += points;
+					_nextPlayer = playerManager.getHandPlayer();
+					break;
+				case _cardSet.CompareWeightType.Higher:
+					player1.trucoCycle.score += points;
+					_nextPlayer = player1;
+					break;
 			}
 		}
 		
@@ -711,7 +715,7 @@ var Server = new function () {
 		}
 		
 		var setWinner = function (player) {
-			Log.add({"Gano segunda parte": player.handler.name});
+			Log.add({"Gano segunda parte": player.handler.getName()});
 			player.pointsEarned += pointTracker.getSecondSectionPoints().getValue(player);
 			_lastPlayer = null;
 		}
@@ -744,10 +748,33 @@ var Server = new function () {
 	}
 	
 	/*
+	* Habilita o desabilita el envio de actiones para el jugador, dependiendo si tiene el turno o no
+	*/
+	var ActionSender = function (playerHandler, actionReceiver) {
+		var _enable = false;
+		
+		playerHandler._serverPostAction = function (action) {
+			if(_enable) {
+				_enable = false;
+				actionReceiver(action);
+			}
+		}
+		
+		this.enable = function () {
+			_enable = true;
+		}
+	}
+	
+	/*
 	 * Datos de estado del jugador
 	 */
-	var PlayerData = function (playerHandler) {
-
+	var PlayerData = function (playerHandler, actionSender) {
+		
+		/*
+		 * Cuando se le pasa el turno al jugador, se le habilita poder enviar acciones
+		 */
+		this.actionSender = actionSender;
+		
 		/*
 		 * datos generales
 		 */ 
@@ -816,11 +843,11 @@ var Server = new function () {
 		var _currentPlayer;
 
 		var init = function () {
-			_currentPlayer = getHandPlayer();
+			setCurrentPlayer(getHandPlayer());
 			if(!_currentPlayer) {
 				player1.setAsHand();
 			}
-			_currentPlayer = getHandPlayer();
+			setCurrentPlayer(getHandPlayer());
 			if(!_currentPlayer) {
 				throw new Error("No hand player");
 			}
@@ -840,10 +867,14 @@ var Server = new function () {
 		var getHandPlayer = getHandPlayer = function () {
 			return player1.isHand? player1: (player2.isHand? player2: null);
 		}
+		
+		var setCurrentPlayer = function (player) {
+			_currentPlayer = player;
+		}
 		init();
 
 		this.setNextPlayer = function (player) {
-			_currentPlayer = player;
+			setCurrentPlayer(player);
 		}
 		
 		this.getHandPlayer = getHandPlayer;
@@ -851,7 +882,7 @@ var Server = new function () {
 		this.getOpponent = getOpponent;
 		
 		this.switchPlayer = function () {
-			_currentPlayer = getOpponent(_currentPlayer);
+			setCurrentPlayer(getOpponent(_currentPlayer));
 		}
 		
 		this.getNextPlayer = function () {
@@ -872,7 +903,7 @@ var Server = new function () {
 		}
 		
 		this.closeSecondSection = function () {
-			_currentPlayer = null;
+			setCurrentPlayer(null);
 		}
 		
 		this.getPlayer1 = function () {
@@ -914,15 +945,17 @@ var Server = new function () {
 		var showLog = function () {
 			var log = {};
 			log["-----------------------"] = "------------------------------<br>";
-			log["--" + _player1.handler.name] = _player1.pointsEarned + (_player1.isHand? " (hand player)": "");
-			log["--" + _player2.handler.name] = _player2.pointsEarned + (_player2.isHand? " (hand player)": "");
+			log["--" + _player1.handler.getName()] = _player1.pointsEarned + (_player1.isHand? " (hand player)": "");
+			log["--" + _player2.handler.getName()] = _player2.pointsEarned + (_player2.isHand? " (hand player)": "");
 			Log.add(log);
 			Log.add({"-----------------------": "------------------------------<br>"});
 		}
 		
 		var init = function () {
-			_player1 = new PlayerData(playerHandler1);
-			_player2 = new PlayerData(playerHandler2);
+			var actionSender1 = new ActionSender(playerHandler1, receiveAction);
+			var actionSender2 = new ActionSender(playerHandler2, receiveAction);
+			_player1 = new PlayerData(playerHandler1, actionSender1);
+			_player2 = new PlayerData(playerHandler2, actionSender2);
 			_playerManager = new PlayerManager(_player1, _player2);
 			_gameHistory = new GameHistory(getGameName(), _player1, _player2);
 			
@@ -935,14 +968,14 @@ var Server = new function () {
 			_deck.shuffle();
 			cards1 = _deck.takeCard(3);
 			cards2 = _deck.takeCard(3);
-			_player1.handler.initHand(cards1);
-			_player2.handler.initHand(cards2);
+			_player1.handler.fireEvent("handInit", {cards: cards1, hasHand: _player1.isHand});
+			_player2.handler.fireEvent("handInit", {cards: cards2, hasHand: _player2.isHand});
 			_player1.setCards(cards1);
 			_player2.setCards(cards2);
 		}
 		
 		var getGameName = function () {
-			return config.name + " - " + playerHandler1.name + " VS. " + playerHandler2.name;
+			return config.name + " - " + playerHandler1.getName() + " VS. " + playerHandler2.getName();
 		}
 		
 		var nextHand = function () {
@@ -951,13 +984,17 @@ var Server = new function () {
 			showLog();
 			
 			_playerManager.newHand();
-			dealCards();
 			
 			_handHistory = new HandHistory(_player1, _player2);
 			_pointCount = new PointTracker(_playerManager, config.maxScore);
 			_cardProcessor = new CardPlayingProcessor(_playerManager, _pointCount);
 			_envidoProcessor = new EnvidoProcessor(_playerManager, _pointCount);
 			_runner = new ActionRunner(_playerManager, _cardProcessor, _envidoProcessor, _pointCount, _handHistory);
+			
+			_player1.handler.fireEvent("updateGlobalData", {globalData: _handHistory.get()});
+			_player2.handler.fireEvent("updateGlobalData", {globalData: _handHistory.get()});
+			
+			dealCards();
 		}
 		
 		var isMaxScore = function (max) {
@@ -976,6 +1013,18 @@ var Server = new function () {
 			clearInterval(_interval);
 			sendGameData();
 		}
+		
+		var receiveAction = function (action) {
+			
+			var currentHand = _runner.execute(action);
+					
+			if(isMaxScore(config.maxScore)) {
+				endGame();
+			}
+			else if(!currentHand) {
+				nextHand();
+			}
+		}
 
 		var gameLoop = function () {
 			var nextPlayer = _playerManager.getNextPlayer();
@@ -986,16 +1035,8 @@ var Server = new function () {
 					nextHand();
 				}
 				else {
-					var action = nextPlayer.handler.play(actions, _handHistory.get().actionStack);
-					var currentHand = _runner.execute(action);
-					
-					if(isMaxScore(config.maxScore)) {
-						endGame();
-					}
-					else if(!currentHand) {
-						nextHand();
-					}
-					
+					nextPlayer.actionSender.enable();
+					nextPlayer.handler.fireEvent("play", {options: actions});
 				}
 			}
 			else {

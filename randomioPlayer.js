@@ -1,96 +1,51 @@
+
 /*
- * IA of Randomio
+ * Random IA
  */
 var RandomPlayer = function (name) {
+	CommonAPI.AbstractPlayer.call(this);
 	
 	var _cardSet = [];
 	var _utils = new Utils();
 	
-	this.name = name || "Randomio";
-
-	this.initHand = function (cardSet) {
-		_cardSet = cardSet;
-	}
-	this.endHand = function () {
-
-	}
-	this.setScorePoints = function (scorePoints) {
-		_scorePoints = scorePoints;
+	var getRandomOption = function (opts) {
+		return opts[_utils.random(0, opts.length-1)];
 	}
 	
-	this.getRandomOption = function(opts)
-	{
-		return opts[_utils.random(0,opts.length-1)];
-		
-	
-	}
-	this.play = function (options, lastActions) {
-		var _randOption = null; 
-		var _allMyOptions = [];
-		var playerName = this.name;
-
-		var objLog = {"Opciones de": playerName};
-		options.each(function (nodeName, node) {
-			objLog[nodeName] = node;
-			_allMyOptions.push(nodeName);
-		});
-
-//		Log.add(objLog);
-
-		_randOption = this.getRandomOption(_allMyOptions);
-		
-		switch(_randOption) {
-			case CommonAPI.ENVIDO:
-				action = CommonAPI.ActionFactory.createEnvido();
-				break;
-			case CommonAPI.REAL_ENVIDO:
-				action = CommonAPI.ActionFactory.createRealEnvido(); 
-				break;
-			case CommonAPI.FALTA_ENVIDO:
-				action = CommonAPI.ActionFactory.createFaltaEnvido();
-				break;
-			case CommonAPI.SON_BUENAS:
-				action = CommonAPI.ActionFactory.createSonBuenas();
-				break;
-			case  CommonAPI.TRUCO:
-				action = CommonAPI.ActionFactory.createTruco();
-				break;
-			case  CommonAPI.RE_TRUCO:
-				action = CommonAPI.ActionFactory.createReTruco();
-				break;
-			case  CommonAPI.VALE_CUATRO:
-				action = CommonAPI.ActionFactory.createValeCuatro();
-				break;
-			case  CommonAPI.QUIERO:
-				action = CommonAPI.ActionFactory.createQuiero(); 
-				break;
-			case  CommonAPI.NO_QUIERO:
-				action = CommonAPI.ActionFactory.createNoQuiero();
-				break;
-			case CommonAPI.POST_SCORE:
-				action = CommonAPI.ActionFactory.createPostScore(28);
-				break;
-			case CommonAPI.GO_TO_DECK:
-				action = CommonAPI.ActionFactory.createGoingToDeck();
-				break;
-			case CommonAPI.PLAY_CARD:
-				action = CommonAPI.ActionFactory.createPlayCard(_cardSet.pop());
-				break;
+	var getAction = function (randOption) {
+		var action;
+		if(randOption==CommonAPI.PLAY_CARD) {
+			action = new Server.Action(Server.ActionType.Card, _cardSet.pop());
 		}
-		
-		/* for (var i=0; i < lastActions.length; i++) {
-			Log.add({
-				actionType: lastActions[i].action.type,
-				actionMessage: (lastActions[i].action.message || {}).name,
-				actionCard: (lastActions[i].action.card || null) + "",
-				playerName: lastActions[i].player
-			});
-		}; */
-		Log.add({
-			Juega: playerName,
-			Message: action.message? action.message.name: action.card
-		});
-		
+		else {
+			action = new Server.Action(Server.ActionType.Message, Server.Messages[randOption]);
+		}
 		return action;
 	}
+
+	this.setName(name);
+	
+	this.addEventListener("handInit", function (event) {
+		_cardSet = this.getCardSet();
+	});
+	this.addEventListener("handEnd", function (event) {
+		// event.cardShowing
+	});
+	this.addEventListener("play", function (event) {
+		var _randOption = null;
+		var _allMyOptions = [];
+
+		event.options.each(function (nodeName, node) {
+			_allMyOptions.push(nodeName);
+		});
+		_randOption = getRandomOption(_allMyOptions);
+		var action = getAction(_randOption);
+		
+		Log.add({
+			Juega: name,
+			Message: action.message? action.message.name: action.card
+		});
+
+		this.postAction(action);
+	});
 }

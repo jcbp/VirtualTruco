@@ -1,7 +1,5 @@
 
 
-
-
 var HTTPLoader = function(url, method, scope, func){
 	var _utils =  new Utils();
 	var _url = url;
@@ -117,8 +115,11 @@ var Utils = function () {
 		else if (obj instanceof Object)
 		{
 			str += '{';
-			for(var prop in obj)
-				str += '"' + prop + '":' + arguments.callee(obj[prop]) + ',';
+			for(var prop in obj) {
+				if(obj.hasOwnProperty(prop)) {
+					str += '"' + prop + '":' + arguments.callee(obj[prop]) + ',';
+				}
+			}
 			if (str.length>2)
 				str = str.substring(0, str.length-2);
 			str += '}';
@@ -145,22 +146,98 @@ var Utils = function () {
 		return ([]).concat(array);
 	}
 	
+	/*
+	 * Manejo de evento
+	 */
 	this.EventManager = function () {
 		var _events = {};
+		
 		this.add = function (eventName, callback) {
-			if(!_events[eventName])
+			if(!_events[eventName]) {
 				_events[eventName] = [];
+			}
 			_events[eventName].push(callback);
 		}
-		this.fire = function (eventName) {
+		
+		this.fire = function (eventName, eventObj) {
 			if(_events[eventName]) {
 				for (var i=0; i < _events[eventName].length; i++) {
-					_events[eventName][i]();
+					_events[eventName][i].call(this, eventObj);
 				};
 			}
 		}
 	}
 }
+
+/*
+ * @Namespace
+ */
+var NSDeck = new function () {
+	
+	var _utils = new Utils();
+	
+	/*
+	 * Define lo que es una carta, a partir del valor y el palo
+	 */
+	var Card = function (value, suit) {
+		this.value = value;
+		this.suit = suit;
+	};
+	Card.prototype.toString = function () {
+		this.toString = function () {
+			return this.value + " of " + this.suit;
+		}
+	}
+
+	/*
+	 * Mezclador de cartas
+	 */
+	this.DeckShuffler = function () {
+		this.shuffle = function (deck) {
+			var ret = [];
+			while(deck.length) {
+				ret.push(deck.splice(_utils.random(0, deck.length - 1), 1)[0]);
+			}
+			return ret;
+		}
+	}
+	
+	/*
+	 * Maso de cartas
+	 */
+	var Deck = this.Deck = function (values, suits, shuffler) {
+		var _cards = [];
+		
+		var init = function () {
+			for (var i=0; i < values.length; i++) {
+				for (var j=0; j < suits.length; j++) {
+					_cards.push(new Card(values[i], suits[j]));
+				};
+			};
+		}
+		init();
+		
+		this.shuffle = function () {
+			_cards = shuffler.shuffle(_cards);
+		}
+		this.takeCard = function (count) {
+			return _cards.splice(0, count);
+		}
+		this.takeBackCard = function (cards) {
+			_cards.concat(cards);
+		}
+	}
+	
+	/*
+	 * Se define el mazo de cartas españolas
+	 */
+	this.SpanishDeck = function (shuffler) {
+		var _deckValues = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
+		var _deckSuits = ["Cup", "Coin", "Club", "Sword"];
+		Deck.call(this, _deckValues, _deckSuits, shuffler);
+	}
+}
+
 
 /*
  * API
@@ -169,7 +246,7 @@ var CommonAPI = new function () {
 	this.ENVIDO 		= "Envido"
 	this.REAL_ENVIDO	= "RealEnvido";
 	this.FALTA_ENVIDO 	= "FaltaEnvido";
-	this.TRUCO 		= "Truco";
+	this.TRUCO 			= "Truco";
 	this.RE_TRUCO	 	= "ReTruco";
 	this.VALE_CUATRO	= "ValeCuatro";
 	this.QUIERO 		= "Quiero";
@@ -315,7 +392,7 @@ var CommonAPI = new function () {
 		 * Se definen las enumeraciones de los posibles resultados de comparar el peso de dos cartas
 		 */
 		var CompareWeightType = this.CompareWeightType = {
-			Less: -1,
+			Lower: -1,
 			Equal: 0,
 			Higher: 1
 		};
@@ -368,7 +445,7 @@ var CommonAPI = new function () {
 		this.compareWeight = function (firstCard, secondCard) {
 			var firstWeight = getCardWeight(firstCard);
 			var secondWeight = getCardWeight(secondCard);
-			return firstWeight < secondWeight ? CompareWeightType.Higher : firstWeight > secondWeight ? CompareWeightType.Less : CompareWeightType.Equal;
+			return firstWeight < secondWeight ? CompareWeightType.Higher : firstWeight > secondWeight ? CompareWeightType.Lower : CompareWeightType.Equal;
 		}
 
 		/*
@@ -380,6 +457,74 @@ var CommonAPI = new function () {
 				return getCardWeight(firstCard) - getCardWeight(secondCard);
 			});
 			return orderedCards;
+		}
+	}
+	
+	/*
+	 * Clase base de la cual se tiene que heredar para armar un jugador
+	 */
+	this.AbstractPlayer = function () {
+
+		var _cardSet = [];
+		var _utils = new Utils();
+		var _event = new _utils.EventManager();
+		var _name = "Default" + _utils.random(100000000, 999999999);
+		var _globalData = null;
+		var _score = {own: 0, opponent: 0};
+		var _hasHand = false;
+		
+		_event.add("handInit", function (event) {
+			_cardSet = event.cards;
+			_hasHand = event.hasHand;
+		});
+		
+		_event.add("updateGlobalData", function (event) {
+			_globalData = event.globalData;
+		});
+		
+		_event.add("opponentScoreChange", function (event) {
+			_score.opponent = event.score;
+		});
+		
+		_event.add("ownScoreChange", function (event) {
+			_score.own = event.score;
+		});
+		
+		this._serverPostAction = null;
+		
+		this.fireEvent = _event.fire;
+		this.addEventListener = _event.add;
+		
+		this.getLastActions = function () {
+			return _globalData.actionStack;
+		}
+		
+		this.getOpponentScore = function () {
+			return _score.opponent;
+		}
+		
+		this.getOwnScore = function () {
+			return _score.own;
+		}
+		
+		this.postAction = function (action) {
+			this._serverPostAction(action);
+		}
+		
+		this.setName = function (name) {
+			_name = name;
+		}
+		
+		this.getName = function (name) {
+			return _name;
+		}
+		
+		this.hasHand = function () {
+			return _hasHand;
+		}
+		
+		this.getCardSet = function () {
+			return _cardSet;
 		}
 	}
 }
