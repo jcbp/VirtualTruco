@@ -14,18 +14,18 @@ TimeLineController.prototype = {
 		this._model.setState(this._model.states.PAUSED);
 	},
 	
-	previousMove: function() {
-		var move = this._model.getCurrentMove();
-		this._model.setMove(--move);
+	previousEvent: function() {
+		var event = this._model.getCurrentEvent();
+		this._model.setEvent(--event);
 	},
 	
-	nextMove: function() {
-		var move = this._model.getCurrentMove();
-		this._model.setMove(++move);
+	nextEvent: function() {
+		var event = this._model.getCurrentEvent();
+		this._model.setEvent(++event);
 	},
 	
-	seekMove: function(move) {
-		this._model.setMove(move);
+	seekEvent: function(event) {
+		this._model.setEvent(event);
 	},
 	
 	normalSpeed: function() {
