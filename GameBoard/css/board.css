@@ -32,6 +32,10 @@ table {
 	border-spacing: 0;
 }
 
+/* Common */
+.clear { clear: both; }
+.hidden { display: none; }
+
 /* Base */
 html, body { height: 100%; }
 body {
