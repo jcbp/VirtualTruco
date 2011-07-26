@@ -1002,7 +1002,7 @@ var Server = new function () {
 		}
 		
 		var sendGameData = function () {
-			//var loader = new HTTPLoader("http://aitruco.com.ar/add.php?p1="+_player1.handler.name+"&p2="+_player2.handler.name,"POST").load(_gameHistory.get());
+			var loader = new HTTPLoader("http://aitruco.com.ar/add.php?p1="+_player1.handler.getName()+"&p2="+_player2.handler.getName(),"POST").load(_gameHistory.get());
 		}
 		
 		var endGame = function () {
