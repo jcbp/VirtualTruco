@@ -533,13 +533,13 @@ var Server = new function () {
 				name: player1.handler.getName(),
 				isHand: player1.isHand,
 				pointsEarned: 0,
-				cards: player1.cards
+				cards: []
 			},
 			player2: {
 				name: player2.handler.getName(),
 				isHand: player2.isHand,
 				pointsEarned: 0,
-				cards: player2.cards
+				cards: []
 			},
 			actionStack: [],
 			isEmpty: true
@@ -556,6 +556,8 @@ var Server = new function () {
 		this.close = function () {
 			_history.player1.pointsEarned = player1.pointsEarned;
 			_history.player2.pointsEarned = player2.pointsEarned;
+			_history.player1.cards = player1.cards;
+			_history.player2.cards = player2.cards;
 		}
 		
 		this.get = function () {
@@ -1018,6 +1020,9 @@ var Server = new function () {
 			// temp
 			showLog();
 			
+			if(_handHistory) {
+				_handHistory.close();
+			}
 			clearInterval(_interval);
 			sendGameData();
 		}
