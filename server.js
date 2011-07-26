@@ -514,13 +514,15 @@ var Server = new function () {
 		};
 		
 		this.addHand = function (handHistory) {
-			var handHistObj = handHistory.get();
-			if(!handHistObj.isEmpty) {
-				_history.body.push(handHistObj);
-			}
+			_history.body.push(handHistory.get());
 		}
 		
 		this.get = function () {
+			for (var i=0; i < _history.body.length; i++) {
+				if(_history.body[i].isEmpty) {
+					_history.body.splice(i, 1);
+				}
+			};
 			return _history;
 		}
 	}
@@ -983,6 +985,9 @@ var Server = new function () {
 			// temp
 			showLog();
 			
+			if(_handHistory) {
+				_handHistory.close();
+			}
 			_playerManager.newHand();
 			
 			_handHistory = new HandHistory(_player1, _player2);
@@ -994,6 +999,8 @@ var Server = new function () {
 			_player1.handler.fireEvent("updateGlobalData", {globalData: _handHistory.get()});
 			_player2.handler.fireEvent("updateGlobalData", {globalData: _handHistory.get()});
 			
+			_gameHistory.addHand(_handHistory);
+			
 			dealCards();
 		}
 		
@@ -1002,6 +1009,7 @@ var Server = new function () {
 		}
 		
 		var sendGameData = function () {
+			var data = _gameHistory.get();
 			//var loader = new HTTPLoader("http://aitruco.com.ar/add.php?p1="+_player1.handler.name+"&p2="+_player2.handler.name,"POST").load(_gameHistory.get());
 		}
 		
