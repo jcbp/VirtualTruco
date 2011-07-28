@@ -926,7 +926,7 @@ var Server = new function () {
 		}
 	}
 	
-	this.GameConfig = function () {
+	this.GameConfig = function (name) {
 		this.name = name;
 		this.playRate = 500;
 		this.maxScore = 30;
