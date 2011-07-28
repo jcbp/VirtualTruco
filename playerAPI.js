@@ -1,4 +1,3 @@
-
 var HTTPLoader = function(url, method, scope, func){
 	var _utils =  new Utils();
 	var _url = url;
@@ -502,7 +501,14 @@ var CommonAPI = new function () {
 		// GAME DATA SET METHODS
 		//-----------------------------
 		
-		
+                this.getOpponentMessages = function () {
+			return getActions(false,"message");
+	        }
+
+                this.getOwnMessages = function () {
+		        return getActions(true,"message");
+	        }	
+
 		this.getOpponentActions = function () {
 			return getActions(false);
 		}
@@ -512,12 +518,14 @@ var CommonAPI = new function () {
 		this.getOpponentCardsPlayed = function () {
 			return getActions(false,"card");
 		}
+
 		this.getOwnCardsPlayed = function () {
 			return getActions(true,"card");
 		}
+
 		this.getLastActionPlayer = function () {
 			var actions = this.getLastActions();
-			return actions.length ? actions[actions.length-1].action : null
+			return actions.length ? actions[actions.length-1].playerName : null
 		}
 				
 		var getActions = function(mine,actionProp){
