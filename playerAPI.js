@@ -1,5 +1,4 @@
 
-
 var HTTPLoader = function(url, method, scope, func){
 	var _utils =  new Utils();
 	var _url = url;
@@ -498,5 +497,50 @@ var CommonAPI = new function () {
 		this.getCardSet = function () {
 			return _cardSet;
 		}
+
+                //-----------------------------
+		// GAME DATA SET METHODS
+		//-----------------------------
+		
+		
+		this.getOpponentActions = function () {
+			return getActions(false);
+		}
+		this.getOwnActions = function () {
+			return getActions(true);
+		}
+		this.getOpponentCardsPlayed = function () {
+			return getActions(false,"card");
+		}
+		this.getOwnCardsPlayed = function () {
+			return getActions(true,"card");
+		}
+		this.getLastActionPlayer = function () {
+			var actions = this.getLastActions();
+			return actions.length ? actions[actions.length-1].action : null
+		}
+				
+		var getActions = function(mine,actionProp){
+			var action;
+			var temp 	= [];
+			var actions = _this.getLastActions();
+			for(var prop in actions){
+				if(actions.hasOwnProperty(prop)){
+					action = actions[prop].action;					
+					if(canRegister(mine, actions[prop].playerName)){
+						if(!actionProp)temp.push( action  );
+						else if(action[actionProp])temp.push( action[actionProp] );
+					}
+				}
+			}
+			
+			return temp;
+		}
+		
+		var canRegister = function(mine,playerName){
+			return (mine  && playerName == _name) ||
+			       (!mine && playerName != _name)
+		}
+		
 	}
 }
