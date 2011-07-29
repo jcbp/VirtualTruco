@@ -15,7 +15,7 @@ var RandomPlayer = function (name) {
 	var getAction = function (randOption) {
 		var action;
 		if(randOption==CommonAPI.PLAY_CARD) {
-			action = new Server.Action(Server.ActionType.Card, _cardSet.pop());
+			action = new Server.Action(Server.ActionType.Card, _cardSet.getCards().pop());
 		}
 		else {
 			action = new Server.Action(Server.ActionType.Message, Server.Messages[randOption]);

@@ -303,71 +303,98 @@ var CommonAPI = new function () {
 		}
 	}
 	
-	this.CardSet = function (cards) {
-		
-		/*
-		 * Se define el peso de las cartas	
-		 */
-		var _cardsWeight = {
-			Cup: {
-				1: 7,
-				2: 6,
-				3: 5,
-				4: 14,
-				5: 13,
-				6: 12,
-				7: 11,
-				10: 10,
-				11: 9,
-				12: 8
-			},
-			Coin:  {
-				1: 7,
-				2: 6,
-				3: 5,
-				4: 14,
-				5: 13,
-				6: 12,
-				7: 4,
-				10: 10,
-				11: 9,
-				12: 8
-			},
-			Club:  {
-				1: 2,
-				2: 6,
-				3: 5,
-				4: 14,
-				5: 13,
-				6: 12,
-				7: 11,
-				10: 10,
-				11: 9,
-				12: 8
-			},
-			Sword:  {
-				1: 1,
-				2: 6,
-				3: 5,
-				4: 14,
-				5: 13,
-				6: 12,
-				7: 3,
-				10: 10,
-				11: 9,
-				12: 8
-			}
-		};
-		
-		/*
-		 * Se definen las enumeraciones de los posibles resultados de comparar el peso de dos cartas
-		 */
-		var CompareWeightType = this.CompareWeightType = {
-			Lower: -1,
-			Equal: 0,
-			Higher: 1
-		};
+	/*
+	 * Se define el peso de las cartas	
+	 */
+	var CardsWeight = {
+		Cup: {
+			1: 7,
+			2: 6,
+			3: 5,
+			4: 14,
+			5: 13,
+			6: 12,
+			7: 11,
+			10: 10,
+			11: 9,
+			12: 8
+		},
+		Coin:  {
+			1: 7,
+			2: 6,
+			3: 5,
+			4: 14,
+			5: 13,
+			6: 12,
+			7: 4,
+			10: 10,
+			11: 9,
+			12: 8
+		},
+		Club:  {
+			1: 2,
+			2: 6,
+			3: 5,
+			4: 14,
+			5: 13,
+			6: 12,
+			7: 11,
+			10: 10,
+			11: 9,
+			12: 8
+		},
+		Sword:  {
+			1: 1,
+			2: 6,
+			3: 5,
+			4: 14,
+			5: 13,
+			6: 12,
+			7: 3,
+			10: 10,
+			11: 9,
+			12: 8
+		}
+	};
+	
+	/*
+	 * Se definen las enumeraciones de los posibles resultados de comparar el peso de dos cartas
+	 */
+	var CompareWeightType = this.CompareWeightType = {
+		Lower: -1,
+		Equal: 0,
+		Higher: 1
+	};
+	
+	/*
+	 * Operaciones sobre cartas individuales
+	 */
+	var CardProcessor = this.CardProcessor = function () {
 
+		/*
+		 * Retorna el peso de la carta
+		 */
+		var getCardWeight = this.getCardWeight = function (card) {
+			return CardsWeight[card.suit] && CardsWeight[card.suit][card.value];
+		}
+		
+		/*
+		 * Retorna si la primer carta es mayor, menor o igual que la segunda
+		 */
+		this.compareWeight = function (firstCard, secondCard) {
+			var firstWeight = getCardWeight(firstCard);
+			var secondWeight = getCardWeight(secondCard);
+			return firstWeight < secondWeight ? CompareWeightType.Higher : firstWeight > secondWeight ? CompareWeightType.Lower : CompareWeightType.Equal;
+		}
+	};
+	
+	/*
+	 * Operaciones sobre un set de cartas (3)
+	 */
+	var CardSet = this.CardSet = function (cards) {
+		
+		var _processor = new CardProcessor();
+		
 		/*
 		 * Retorna el valor del envido de una carta
 		 */
@@ -392,7 +419,7 @@ var CommonAPI = new function () {
 		/*
 		 * Retorna el envido mas alto posible evaluando todas las cartas de la mano
 		 */
-		 this.calculateEnvido = function() {
+		this.calculateEnvido = function() {
 			var envido = 0;
 			var i, j;
 			for(i = 0; i < cards.length; i++) {
@@ -402,33 +429,21 @@ var CommonAPI = new function () {
 			}
 			return envido;
 		}
-
-		/*
-		 * Retorna el peso de la carta
-		 */
-		var getCardWeight = this.getCardWeight = function (card) {
-			return _cardsWeight[card.suit] && _cardsWeight[card.suit][card.value];
-		}
 		
-		/*
-		 * Retorna si la primer carta es mayor, menor o igual que la segunda
-		 */
-		this.compareWeight = function (firstCard, secondCard) {
-			var firstWeight = getCardWeight(firstCard);
-			var secondWeight = getCardWeight(secondCard);
-			return firstWeight < secondWeight ? CompareWeightType.Higher : firstWeight > secondWeight ? CompareWeightType.Lower : CompareWeightType.Equal;
-		}
-
 		/*
 		 * Retorna las cartas ordenadas por peso en orden ascendente
 		 */
 		this.getWinnerCards = function () {
 			var orderedCards = [].concat(cards);
 			orderedCards.sort(function(firstCard, secondCard) {
-				return getCardWeight(firstCard) - getCardWeight(secondCard);
+				return _processor.getCardWeight(firstCard) - _processor.getCardWeight(secondCard);
 			});
 			return orderedCards;
 		}
+		
+		this.getCards = function () {
+			return cards;
+		};
 	}
 	
 	/*
@@ -445,7 +460,7 @@ var CommonAPI = new function () {
 		var _hasHand = false;
 		
 		_event.add("handInit", function (event) {
-			_cardSet = event.cards;
+			_cardSet = new CardSet(event.cards);
 			_hasHand = event.hasHand;
 		});
 		
@@ -517,7 +532,7 @@ var CommonAPI = new function () {
 		}
 		this.getLastActionPlayer = function () {
 			var actions = this.getLastActions();
-			return actions.length ? actions[actions.length-1].action : null
+			return actions.length ? actions[actions.length-1].action : null;
 		}
 				
 		var getActions = function(mine,actionProp){
@@ -539,7 +554,7 @@ var CommonAPI = new function () {
 		
 		var canRegister = function(mine,playerName){
 			return (mine  && playerName == _name) ||
-			       (!mine && playerName != _name)
+			       (!mine && playerName != _name);
 		}
 		
 	}

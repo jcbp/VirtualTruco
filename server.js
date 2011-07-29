@@ -451,6 +451,15 @@ var Server = new function () {
 		
 		var _value = initValue;
 		var _isFaltaEnvido = false;
+		var _goodsLimit = maxScore / 2;
+		
+		var anyoneGoods = function () {
+			return (playerManager.getPlayer1().pointsEarned > _goodsLimit) || (playerManager.getPlayer2().pointsEarned > _goodsLimit);
+		}
+		
+		var getTheAwesomeFaltaEnvidoScoreForPlayerInGoods = function () {
+			return maxScore - Math.max(playerManager.getPlayer1().pointsEarned, playerManager.getPlayer2().pointsEarned);
+		}
 		
 		this.setValue = function (value) {
 			_value = value;
@@ -461,7 +470,16 @@ var Server = new function () {
 		}
 		
 		this.getValue = function (player) {
-			return _isFaltaEnvido? (maxScore - playerManager.getOpponent(player).pointsEarned): _value;
+			var _ret = _value;
+			if(_isFaltaEnvido) {
+				if(anyoneGoods()) {
+					_ret = getTheAwesomeFaltaEnvidoScoreForPlayerInGoods();
+				}
+				else {
+					_ret = maxScore - player.pointsEarned;
+				}
+			}
+			return _ret;
 		}
 	}
 
@@ -528,16 +546,19 @@ var Server = new function () {
 	}
 	
 	var HandHistory = function (player1, player2) {
+		
 		var _history = {
 			player1: {
 				name: player1.handler.getName(),
 				isHand: player1.isHand,
+				envidoPoints: 0,
 				pointsEarned: 0,
 				cards: []
 			},
 			player2: {
 				name: player2.handler.getName(),
 				isHand: player2.isHand,
+				envidoPoints: 0,
 				pointsEarned: 0,
 				cards: []
 			},
@@ -554,10 +575,17 @@ var Server = new function () {
 		}
 		
 		this.close = function () {
+			var player1CardSet = new CommonAPI.CardSet(player1.cards);
+			var player2CardSet = new CommonAPI.CardSet(player2.cards);
+			
 			_history.player1.pointsEarned = player1.pointsEarned;
 			_history.player2.pointsEarned = player2.pointsEarned;
+			
 			_history.player1.cards = player1.cards;
 			_history.player2.cards = player2.cards;
+			
+			_history.player1.envidoPoints = player1CardSet.calculateEnvido();
+			_history.player2.envidoPoints = player2CardSet.calculateEnvido();
 		}
 		
 		this.get = function () {
@@ -683,26 +711,26 @@ var Server = new function () {
 	 * Procesamiento del juego de cartas
 	 */
 	var CardPlayingProcessor = function (playerManager, pointTracker) {
-		var _cardSet = new CommonAPI.CardSet();
+		var _processor = new CommonAPI.CardProcessor();
 		var _handPoints = [100, 50, 100];
 		var _nextPlayer = playerManager.getHandPlayer();
 		var _lastPlayer = null;
 		
 		var evalHand = function (player1, player2) {
-			var result = _cardSet.compareWeight(player1.trucoCycle.currentCard, player2.trucoCycle.currentCard);
+			var result = _processor.compareWeight(player1.trucoCycle.currentCard, player2.trucoCycle.currentCard);
 			var points = _handPoints.pop();
 
 			switch(result) {
-				case _cardSet.CompareWeightType.Lower:
+				case CommonAPI.CompareWeightType.Lower:
 					player2.trucoCycle.score += points;
 					_nextPlayer = player2;
 					break;
-				case _cardSet.CompareWeightType.Equal:
+				case CommonAPI.CompareWeightType.Equal:
 					player1.trucoCycle.score += points;
 					player2.trucoCycle.score += points;
 					_nextPlayer = playerManager.getHandPlayer();
 					break;
-				case _cardSet.CompareWeightType.Higher:
+				case CommonAPI.CompareWeightType.Higher:
 					player1.trucoCycle.score += points;
 					_nextPlayer = player1;
 					break;
@@ -939,7 +967,7 @@ var Server = new function () {
 		var _playerManager;
 		var _gameHistory;
 		var _pointCount;
-		var _cardProcessor;
+		var _cardPlayingProcessor;
 		var _envidoProcessor;
 		var _handHistory;
 		var _runner;
@@ -994,9 +1022,9 @@ var Server = new function () {
 			
 			_handHistory = new HandHistory(_player1, _player2);
 			_pointCount = new PointTracker(_playerManager, config.maxScore);
-			_cardProcessor = new CardPlayingProcessor(_playerManager, _pointCount);
+			_cardPlayingProcessor = new CardPlayingProcessor(_playerManager, _pointCount);
 			_envidoProcessor = new EnvidoProcessor(_playerManager, _pointCount);
-			_runner = new ActionRunner(_playerManager, _cardProcessor, _envidoProcessor, _pointCount, _handHistory);
+			_runner = new ActionRunner(_playerManager, _cardPlayingProcessor, _envidoProcessor, _pointCount, _handHistory);
 			
 			_player1.handler.fireEvent("updateGlobalData", {globalData: _handHistory.get()});
 			_player2.handler.fireEvent("updateGlobalData", {globalData: _handHistory.get()});
