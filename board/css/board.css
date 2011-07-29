@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* CSS Reset */
 html, body, div, span, applet, object, iframe,
 h1, h2, h3, h4, h5, h6, p, blockquote, pre,
@@ -78,4 +79,113 @@ ul#timeLine-controls #timeLine {
 ul#timeLine-controls #timeLine div { margin: 2px 0 0; }
 
 /* Cards View */
+=======
+/* CSS Reset */
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, font, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	outline: 0;
+	font-size: 100%;
+	vertical-align: baseline;
+	background: transparent;
+}
+body { line-height: 1; }
+ol, ul { list-style: none; }
+blockquote, q { quotes: none; }
+blockquote:before, blockquote:after,
+q:before, q:after {
+	content: '';
+	content: none;
+}
+:focus { outline: 0; }
+ins { text-decoration: none; }
+del { text-decoration: line-through; }
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
+/* Common */
+.clear { clear: both; }
+.hidden { display: none; }
+
+/* Base */
+html, body { height: 100%; }
+body {
+	font-family: "Trebuchet MS", sans-serif;
+	background: #000 url(../img/table_texture_3.jpg) no-repeat top center;
+}
+#board {
+	position: relative;
+	margin: 0 auto;
+	padding: 0 20px;
+	width: 1024px;
+	height: 100%;
+	overflow: hidden;
+}
+
+/* Loader */
+#loader {
+	display: none;
+	position: absolute;
+	bottom: 0;
+	right: 0;
+	background: transparent url(../img/ajax-loader.gif) no-repeat center center;
+	padding: 20px;
+	width: 32px;
+	height: 32px;
+}
+
+/* Formulario de Match Id */
+#form-match {
+	display: none;
+	position: absolute;
+	right: 0;
+	background: #000;
+	color: #fff;
+	margin: 0 auto;
+	padding: 20px;
+	z-index: 10000;
+}
+#form-match p { margin-bottom: 10px; }
+#match-id { width: 50px; }
+
+/* Time Line View */
+ul#timeLine-controls {
+	display: none;
+	position: absolute;
+	bottom: 20px;
+	margin: 0;
+	padding: 0;
+	z-index: 500;
+}
+ul#timeLine-controls li {
+	margin: 2px;
+	position: relative;
+	padding: 4px 0;
+	cursor: pointer;
+	float: left;
+	list-style: none;
+}
+ul#timeLine-controls span.ui-icon {
+	float: left;
+	margin: 0 4px;
+}
+ul#timeLine-controls #timeLine {
+	padding: 4px 10px;
+	width: 820px;
+}
+ul#timeLine-controls #timeLine div { margin: 2px 0 0; }
+
+/* Cards View */
+>>>>>>> GameBoard Implementación :: UPDATE
 div#cards { height: 100%; }
