@@ -24,7 +24,8 @@ var Card = function (rank, suit, depth, backImg) {
 	};
 	
 	el.setToFront = function() {
-		this.style.backgroundPosition = (1 - rank) * 112 + "px " + -suit * 172 + "px";
+		var r = rank > 6 ? rank + 2 : rank;
+		this.style.backgroundPosition = -r * 112 + "px " + -suit * 172 + "px";
 	};
 	
 	el.setToBack = function() {

@@ -24,10 +24,10 @@ var GameBoardModel = function () {
 	this.eventTypes = {
 		HAND_START: "HandStart",
 		HAND_ENDED: "HandEnded",
-		CARD: "Card"
+		CARD: "Card",
+		MESSAGE:"Message"
 	};
 
-	this._match;
 	this._events = new Array();
 	this._curEvent = 0;
 	this._state = this.states.PAUSED;
@@ -63,28 +63,50 @@ GameBoardModel.prototype = {
 			data: { id: matchId },
 			context: this,
 			success: function(data) {
-				this._match = data;
-				this.init();
+				this.init(data);
 			}
 		});
 	},
 	
-	init: function() {
-		var len = this._match.body.length;
-		var stckLen;
-		var hand;
-		var dealer;
-		for (var i=0; i < len; i++) {
-			stckLen = this._match.body[i].actionStack.length;
-			hand = this._match.body[i].player1.isHand ? this._match.body[i].player1.name : this._match.body[i].player2.name;
-			dealer = this._match.body[i].player1.isHand ? this._match.body[i].player2.name : this._match.body[i].player1.name;
-			this._events.push({ action: { type: this.eventTypes.HAND_START }, playerName: dealer });
-			for (var j=0; j < stckLen; j++)
-				this._events.push(this._match.body[i].actionStack[j]);
-			this._events.push({ action: { type: this.eventTypes.HAND_ENDED }, playerName: hand });
+	init: function(match) {
+		this._players = new Array(match.head.player1, match.head.player2);
+		
+		var events = match.body;
+		var action;
+		var playerAction;
+		for (var i=0; i < events.length; i++) {
+			// Hand Start
+			this._events.push({
+				type: this.eventTypes.HAND_START,
+				player1: events[i].player1,
+				player2: events[i].player2,
+				action: null
+			});
+			
+			for (var j=0; j < events[i].actionStack.length; j++) {
+				// Message/Card
+				action = events[i].actionStack[j].action;
+				playerAction = events[i].actionStack[j].playerName;
+				this._events.push({
+					type: events[i].actionStack[j].action.type,
+					player1: events[i].player1,
+					player2: events[i].player2,
+					action: {
+						message: action.message,
+						card: action.card,
+						player: playerAction
+					}
+				});
+			}
+			// Hand Ended
+			this._events.push({
+				type: this.eventTypes.HAND_ENDED,
+				player1: events[i].player1,
+				player2: events[i].player2,
+				action: null
+			});
 		}
 		
-		this._players = new Array(this._match.head.player1, this._match.head.player2);
 		this.matchLoaded.notify();
 	},
 	
@@ -96,8 +118,16 @@ GameBoardModel.prototype = {
 		return this._state;
 	},
 	
+	getEvents: function() {
+		return this._events;
+	},
+	
 	getTotalEvents: function() {
 		return this._events.length;
+	},
+	
+	getTotalPlayers: function() {
+		return this._players.length;
 	},
 	
 	getSpeedMultiplier: function() {

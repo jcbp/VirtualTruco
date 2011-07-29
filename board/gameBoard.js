@@ -28,7 +28,9 @@ $(document).ready(function () {
 		"view/TimeLineView.js",
 		"ui/Card.js",
 		"controller/CardsController.js",
-		"view/CardsView.js"
+		"view/CardsView.js",
+		"ui/Balloon.js",
+		"view/MessagesView.js"
 	];
 	
 	function getScripts() {
@@ -62,6 +64,8 @@ $(document).ready(function () {
 		cardsController = new CardsController(model);
 		cardsView = new CardsView(model, cardsController, { 'container': $('#cards') });
 		
-		model.loadMatch(6);
+		messagesView = new MessagesView(model, null, { 'container': $('#board') });
+		
+		model.loadMatch(37);
 	}
 });
