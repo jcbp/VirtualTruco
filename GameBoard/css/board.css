@@ -48,6 +48,7 @@ body {
 	padding: 0 20px;
 	width: 1024px;
 	height: 100%;
+	overflow: hidden;
 }
 
 /* Time Line View */

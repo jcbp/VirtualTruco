@@ -5,10 +5,12 @@ var CardsView = function (model, controller, elements) {
 
 	this.random = {
 		DEAL: "deal",
-		STACK: "stack"
+		STACK: "stack",
+		THROW: "throw"
 	};
 
 	this.DEPTH = 100;
+	this.THROW_DEPTH = 200;
 	this.QTY_CARDS_DEAL = 6;
 	this.POSITION_RANDOM_MIN = -3;
 	this.POSITION_RANDOM_MAX = 3;
@@ -20,11 +22,11 @@ var CardsView = function (model, controller, elements) {
 	this._elements = elements;
 
 	this._ranks = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
-	this._suits = ["club", "sword", "cup", "gold"];
+	this._suits = ["Club", "Sword", "Cup", "Coin"];
 	
+	this._history = new Array();
 	this._deck = new Array();
-	this._dealt = new Array();
-	this._dealing = false;	
+	this._thrownCounter = 0;
 	
 	var _this = this;
 
@@ -46,7 +48,7 @@ var CardsView = function (model, controller, elements) {
 CardsView.prototype = {
 	show: function() {
 		this.remove();
-		this.buildCards();
+		this.buildCards(this._model.getEvents());
 	},
 	
 	remove: function() {
@@ -54,22 +56,55 @@ CardsView.prototype = {
 			this._deck.pop().remove();
 	},
 	
-	buildCards: function() {
-		var e = this._elements;
-		var count = 0;
-		var card;
-		
+	buildCards: function(match) {
+		// Construye el mazo
 		for (var i = 0; i < this._suits.length; i++)
 			for (var j = 0; j < this._ranks.length; j++) {
-				card = new Card(this._ranks[j], i, this.DEPTH + count++, 0);
+				card = new Card(j, i, this.DEPTH + this._ranks.length*i + j, 0);
 				this._deck.push(card);
-				e.container.append(card);
 			}
-			
-			this.stackingCards( { top: e.container.height()*0.5 - $(card).height()*0.5, left: e.container.width()*0.5 - $(card).width()*0.5 }, 0);
+		
+		var cards1;
+		var cards2;
+		var dealer;
+		for (i=0; i < match.length; i++) {
+			switch(match[i].type) {
+				case this._model.eventTypes.HAND_START:
+					dealer = match[i].player1.isHand ? match[i].player2.name : match[i].player1.name;
+					if (match[i].player1.isHand) {
+						cards1 = match[i].player1.cards;
+						cards2 = match[i].player2.cards;
+					} else {
+						cards1 = match[i].player2.cards;
+						cards2 = match[i].player1.cards;
+					}
+					
+					this._history.push(this.dealCards(this._model.getPlayerIdByName(dealer), cards1, cards2));
+					break;
+				
+				case this._model.eventTypes.HAND_ENDED:
+					this._history.push(this.collectCards());
+					break;
+				
+				case this._model.eventTypes.CARD:
+					this._history.push(this.throwCard(this._model.getPlayerIdByName(match[i].action.player), match[i].action.card));
+					break;
+				
+				default:
+					this._history.push(this._history[this._history.length - 1]);
+					break;
+			}
+		}
+				
+		// Agrega las cartas al container
+		for (i=0; i < this._deck.length; i++)
+			this._elements.container.append(this._deck[i]);
+		
+		// Aplica la posicion inicial
+		this.showCardsEventByCards(this.collectCards());
 	},
 	
-	randomizePosition: function(position, rotation, type) {
+	randomize: function(type, position, rotation) {
 		var posX;
 		var posY;
 		
@@ -82,6 +117,7 @@ CardsView.prototype = {
 				break;
 			
 			case this.random.DEAL:
+			case this.random.THROW:
 				rotation = rotation + Math.floor(Math.random() * (this.ROTATION_RANDOM_MIN*8 - this.ROTATION_RANDOM_MAX*8 + 1) + this.ROTATION_RANDOM_MAX*8);
 				posX = position.left + Math.floor(Math.random() * (this.POSITION_RANDOM_MIN*10 - this.POSITION_RANDOM_MAX*10 + 1) + this.POSITION_RANDOM_MAX*10);
 				posY = position.top + Math.floor(Math.random() * (this.POSITION_RANDOM_MIN*10 - this.POSITION_RANDOM_MAX*10 + 1) + this.POSITION_RANDOM_MAX*10);
@@ -89,89 +125,118 @@ CardsView.prototype = {
 				break;
 		}
 		
-		return {left: posX, top: posY, rotation: rotation};
+		return { left: Math.round(posX), top: Math.round(posY), rotation: Math.round(rotation) };
 	},
 	
 	stackingCards: function(position, rotation) {
-		var ranPos;
+		var stack = new Array();
+		var ran;
 		for (var i=0; i < this._deck.length; i++) {
-			ranPos = this.randomizePosition(position, rotation, this.random.STACK);
-			$(this._deck[i]).css({ left: ranPos.left, top: ranPos.top }).rotate(ranPos.rotation);
+			ran = this.randomize(this.random.STACK, position, rotation);
+			stack.push({
+				position: { left:ran.left, top:ran.top },
+				rotation: ran.rotation,
+				depth: this.DEPTH + i,
+				isFaceUp: false
+			});
 		}
-	},
-	
-	dealCards: function(event) {
-		console.log("deal cards");
-		
-		this._dealing = true;
-		
-		this._controller.dealStart();
-		
-		var _this = this;
-		
-		var e = this._elements;
 
+		return stack;
+	},
+		
+	dealCards: function(player, cards1, cards2) {
+		var e = this._elements;
 		var card = $(this._deck[0]);
 		var centerX = e.container.width()*0.5 - card.width()*0.5;
 		var centerY = e.container.height()*0.5 - card.height()*0.5;
 		var targetRotation;
-		//var targetDeal;
 		var targetPos1;
 		var targetPos2;
 		var targetDeck;
-
-		if (this._model.getPlayerIdByName(event.playerName) == 0) {
+		
+		if (player == 0) {
 			targetRotation = 180;
-			this.stackingCards({ top: 0, left: 200 }, targetRotation);
-			//targetDeal = { top: 0, left: card.width() + 100 };
 			targetPos1 = { top: e.container.height() - card.height() - 20, left: centerX };
 			targetPos2 = { top: 20, left: centerX };
 			targetDeck = { top: centerY, left: 200 };
 		} else {
 			targetRotation = 0;
-			this.stackingCards({ top: e.container.height() - card.height(), left: e.container.width() - card.width() - 20 }, targetRotation);
-			//targetDeal = { top: e.container.height() - card.height(), left: e.container.width() - card.width() - 100 };
 			targetPos1 = { top: 20, left: centerX };
 			targetPos2 = { top: e.container.height() - card.height() - 20, left: centerX };
 			targetDeck = { top: centerY, left: e.container.width() - card.width() - 20 };
 		}
-		
-		if (this._model.showAnimation()) {
-		//	this.dealCardAnimation(0, targetDeal, targetPos1, targetPos2);
-		} else {
-			for (var i=0; i < 6; i++)
-				this.dealCard((i%2 == 0 ? targetPos1 : targetPos2), (i%2 == 0 ? targetRotation + 180 : 0 + targetRotation ));
-			this.stackingCards(targetDeck, targetRotation);
+
+		// Genera la pila de cartas dependiendo el repartidor
+		var cards = this.stackingCards(targetDeck, targetRotation);
+				
+		// Intercambia el indice de profundidad de las cartas a repartir y
+		// fija las posiciones y rotaciones.
+		var lastId = cards.length - 1;
+		var ran;
+		var cardId;
+		var aux;
+		for (var i=0; i < 3; i++) {
+			ran = this.randomize(this.random.DEAL, targetPos1, targetRotation + 180);
+			cardId = this.getCardIdByRankAndSuit(cards1[i].value, cards1[i].suit);
+			aux = cards[lastId - i*2].depth;
+			cards[lastId - i*2].depth = cards[cardId].depth;
+			cards[cardId] = {
+				position: { left:ran.left, top:ran.top },
+				rotation: ran.rotation,
+				depth: aux,
+				isFaceUp: false
+			};
+			
+			ran = this.randomize(this.random.DEAL, targetPos2, targetRotation);
+			cardId = this.getCardIdByRankAndSuit(cards2[i].value, cards2[i].suit);
+			aux = cards[lastId -(i*2 + 1)].depth;
+			cards[lastId - (i*2 + 1)].depth = cards[cardId].depth;
+			cards[cardId] = {
+				position: { left:ran.left, top:ran.top },
+				rotation: ran.rotation,
+				depth: aux,
+				isFaceUp: false
+			};
 		}
+		
+		return cards;
 	},
 	
 	collectCards: function() {
-		console.log("collect cards");
-		
-		var e = this._elements;
-		var card;
+		this._thrownCounter = 0;
 
-		while (card = this._dealt.pop())
-			this._deck.push(card);
-	
-		card = $(this._deck[0]);		
-		this.stackingCards( { top: e.container.height()*0.5 - card.height()*0.5, left: e.container.width()*0.5 - card.width()*0.5 }, 0);
+		var e = this._elements;
+		var card = $(this._deck[0]);
+		var centerX = e.container.width()*0.5 - $(card).width()*0.5;
+		var centerY = e.container.height()*0.5 - $(card).height()*0.5;
+
+		return this.stackingCards( { top: centerY, left: centerX }, 0);
 	},
 	
-	throwCard: function(card) {
-		console.log("throw card -> " + card.value + " of " + card.suit);
-	},
-	
-	dealCard: function(t, r) {
-		var card = $(this._deck.pop());
-		this._dealt.push(card[0]);
-		var rt = this.randomizePosition(t, r, this.random.DEAL);		
+	throwCard: function(player, card) {
+		var cards = new Array();
+		for (var i=0; i < this._history[this._history.length - 1].length; i++)
+			cards.push(this._history[this._history.length - 1][i]);
+			
+		var e = this._elements;
 		
-		console.log("random rotation -> " + rt.rotation);
+		var cardId = this.getCardIdByRankAndSuit(card.value, card.suit);
+		var centerX = e.container.width()*0.5 - $(this._deck[0]).width()*0.5;
+		var centerY = e.container.height()*0.5 - $(this._deck[0]).height()*0.5;
+		var position = player == 0 ? { left: centerX, top: centerY - 100 } : { left: centerX, top: centerY + 100 };
+		var rotation = player == 0 ? 180 : 0;
+		var ran = this.randomize(this.random.THROW, position, rotation);
 		
-		card.css({ left: rt.left, top: rt.top }).rotate(rt.rotation);
+		cards[cardId] = {
+			position: { left:ran.left, top:ran.top },
+			rotation: rotation,
+			depth: this.THROW_DEPTH + this._thrownCounter++,
+			isFaceUp: true
+		};
+
+		return cards;
 	},
-	
+		
 	/*dealCardAnimation: function(i, td, t1, t2, r) {
 		var _this = this;
 		var e = this._elements;
@@ -210,22 +275,60 @@ CardsView.prototype = {
 				});
 		}
 	},*/
+	
+	showCardsEventByCards: function(cards) {
+		for (var i=0; i < this._deck.length; i++) {
+			$(this._deck[i]).css({ left:cards[i].position.left, top:cards[i].position.top });
+			$(this._deck[i]).rotate(cards[i].rotation);
+			this._deck[i].setDepth(cards[i].depth);
+			if (cards[i].isFaceUp)
+				this._deck[i].setToFront();
+			else
+				this._deck[i].setToBack();
+		}
+	},
+	
+	showCardsEventByIndex: function(index) {
+		var cards = this._history[index];
+		
+		for (var i=0; i < this._deck.length; i++) {
+			$(this._deck[i]).css({ left:cards[i].position.left, top:cards[i].position.top });
+			$(this._deck[i]).rotate(cards[i].rotation);
+			this._deck[i].setDepth(cards[i].depth);
+			if (cards[i].isFaceUp == true)
+				this._deck[i].setToFront();
+			else
+				this._deck[i].setToBack();
+		}
+	},
 
 	updateCards: function() {
-		var event = this._model.getEvent();
-
-		console.log("player -> " + event.playerName);
-
-		if (event.action.type == this._model.eventTypes.HAND_START) {
-			this.collectCards(event);
-			this.dealCards(event);
-		}
+		this.showCardsEventByIndex(this._model.getCurrentEvent());
+	},
+	
+	getRankIdByRank: function(rank) {
+		var len = this._ranks.length;
+		for (var i=0; i < len; i++)
+			if (this._ranks[i] == rank)
+				return i;
 		
-		if (event.action.type == this._model.eventTypes.HAND_ENDED) 
-			this.collectCards(event);
+		return null;
+	},
+	
+	getSuitIdBySuit: function(suit) {
+		var len = this._suits.length;
+		for (var i=0; i < len; i++)
+			if (this._suits[i] == suit)
+				return i;
 		
-		if (event.action.type == this._model.eventTypes.CARD)
-			this.throwCard(event.action.card);
+		return null;
+	},
+	
+	getCardIdByRankAndSuit: function(rank, suit) {
+		for (var i=0; i < this._deck.length; i++)
+			if (this._deck[i].rank == this.getRankIdByRank(rank) && this._deck[i].suit == this.getSuitIdBySuit(suit))
+				return i;
+		return null;
 	}
-
+	
 };
