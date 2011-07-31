@@ -10,6 +10,12 @@
 </head>
 
 <body>
+<div id="loader"></div>
+<div id="form-match">
+	<p>Ingresá el código de paritda que querés chequear.</p>
+	<input type="number" id="match-id" name="match-id" value="" />
+  <button type="button" id="send-id">Get</button>
+</div>
 <div id="board">
   <div id="cards"></div>
   <ul id="timeLine-controls" class="ui-widget ui-helper-clearfix hidden">

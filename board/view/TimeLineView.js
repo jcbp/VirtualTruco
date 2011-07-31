@@ -36,7 +36,7 @@ var TimeLineView = function (model, controller, elements) {
 
 TimeLineView.prototype = {
 	show: function() {
-		this._max = this._model.getTotalEvents();
+		this._max = this._model.getTotalEvents() - 1;
 		this.buildTimeLine();
 	},
 	

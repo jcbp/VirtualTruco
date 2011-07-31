@@ -51,8 +51,35 @@ body {
 	overflow: hidden;
 }
 
+/* Loader */
+#loader {
+	display: none;
+	position: absolute;
+	bottom: 0;
+	right: 0;
+	background: transparent url(../img/ajax-loader.gif) no-repeat center center;
+	padding: 20px;
+	width: 32px;
+	height: 32px;
+}
+
+/* Formulario de Match Id */
+#form-match {
+	display: none;
+	position: absolute;
+	right: 0;
+	background: #000;
+	color: #fff;
+	margin: 0 auto;
+	padding: 20px;
+	z-index: 10000;
+}
+#form-match p { margin-bottom: 10px; }
+#match-id { width: 50px; }
+
 /* Time Line View */
 ul#timeLine-controls {
+	display: none;
 	position: absolute;
 	bottom: 20px;
 	margin: 0;

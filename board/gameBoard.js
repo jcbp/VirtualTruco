@@ -1,4 +1,5 @@
 $(document).ready(function () {
+	$("#loader").fadeIn(800);
 	/*var resources = [
 		"libs/jquery-ui-1.8.14.custom.min.js",
 		"utils/Event.js",
@@ -35,9 +36,10 @@ $(document).ready(function () {
 	
 	function getScripts() {
 		$.getScript(resources[i], function() {
-			if (i++ >= resources.length - 1)
+			if (i++ >= resources.length - 1) {
+				$("#loader").fadeOut(800);
 				init();
-			else
+			} else
 				getScripts();
 		});
 	}
@@ -64,8 +66,17 @@ $(document).ready(function () {
 		cardsController = new CardsController(model);
 		cardsView = new CardsView(model, cardsController, { 'container': $('#cards') });
 		
-		messagesView = new MessagesView(model, null, { 'container': $('#board') });
+		messagesView = new MessagesView(model, null, { 'container': $('#board') });	
 		
-		model.loadMatch(37);
-	}
+		$("#form-match").fadeIn(800, function() {
+			$("#match-id").focus();
+			$("#send-id").click(function(e) {
+				var id = $("#match-id").val();
+				if (id != "" || !isNaN(parseFloat(val)))
+					model.loadMatch(id);
+				$("#form-match").fadeOut(800, function() { $(this).remove(); });
+			});
+		});
+
+	}	
 });
