@@ -4,14 +4,14 @@
  */
 var RandomPlayer = function (name) {
 	CommonAPI.AbstractPlayer.call(this);
-	
+
 	var _cardSet = [];
 	var _utils = new Utils();
-	
+
 	var getRandomOption = function (opts) {
 		return opts[_utils.random(0, opts.length-1)];
 	}
-	
+
 	var getAction = function (randOption) {
 		var action;
 		if(randOption==CommonAPI.PLAY_CARD) {
@@ -24,7 +24,7 @@ var RandomPlayer = function (name) {
 	}
 
 	this.setName(name);
-	
+
 	this.addEventListener("handInit", function (event) {
 		_cardSet = this.getCardSet();
 	});
@@ -36,11 +36,13 @@ var RandomPlayer = function (name) {
 		var _allMyOptions = [];
 
 		event.options.each(function (nodeName, node) {
-			_allMyOptions.push(nodeName);
+			if(nodeName != "FaltaEnvido" || _cardSet.calculateEnvido() > 30) {
+				_allMyOptions.push(nodeName);
+			}
 		});
 		_randOption = getRandomOption(_allMyOptions);
 		var action = getAction(_randOption);
-		
+
 		Log.add({
 			Juega: name,
 			Message: action.message? action.message.name: action.card
