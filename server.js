@@ -741,16 +741,29 @@ var Server = new function () {
 	 */
 	var EnvidoProcessor = function (playerManager, pointTracker) {
 		
-		var setWinner = function (player) {
+		var setWinner = function (player, accepted, winnerScore, loserScore) {
 			
+			// ------------------------------ LOG ----------------------------
 			var log={};
 			log["Tanto de " + player.handler.getName()] = (new CommonAPI.CardSet(player.cards)).calculateEnvido();
 			var opponent = playerManager.getOpponent(player);
 			log["Tanto de " + opponent.handler.getName()] = (new CommonAPI.CardSet(opponent.cards)).calculateEnvido();
 			Log.add(log);
 			Log.add({"Gano el tanto": player.handler.getName()});
+			// ---------------------------------------------------------------
 			
 			player.pointsEarned += pointTracker.getFirstSectionPoints().getValue(player);
+			
+			if(accepted) {
+				if(player.isHand) {
+					// son buenas
+					player.handler.fireEvent("cardPointsPosted", {cardPoints: -1, areGood: true});
+				}
+				else {
+					player.handler.fireEvent("cardPointsPosted", {cardPoints: loserScore});
+				}
+				playerManager.getOpponent(player).handler.fireEvent("cardPointsPosted", {cardPoints: winnerScore});
+			}
 			
 			player.handler.fireEvent("ownScoreChange", {score: player.pointsEarned});
 			playerManager.getOpponent(player).handler.fireEvent("opponentScoreChange", {score: player.pointsEarned});
@@ -762,15 +775,16 @@ var Server = new function () {
 			var opponentCardSet = new CommonAPI.CardSet(opponent.cards);
 			var playerScore = playerCardSet.calculateEnvido();
 			var opponentScore = opponentCardSet.calculateEnvido();
+			var playerHand = playerManager.getHandPlayer();
 			
 			if(playerScore > opponentScore) {
-				setWinner(player);
+				setWinner(player, true, playerScore, opponentScore);
 			}
 			else if(playerScore < opponentScore) {
-				setWinner(opponent);
+				setWinner(opponent, true, opponentScore, playerScore);
 			}
 			else {
-				setWinner(playerManager.getHandPlayer());
+				setWinner(playerHand, true, playerScore, playerScore);
 			}
 		}
 		
@@ -779,7 +793,7 @@ var Server = new function () {
 				evalEnvido(player);
 			}
 			else if(node.type == ReplyType.FirstSectionNoQuiero) {
-				setWinner(playerManager.getOpponent(player));
+				setWinner(playerManager.getOpponent(player), false);
 			}
 		}
 	}
