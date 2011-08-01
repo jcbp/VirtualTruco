@@ -3,7 +3,7 @@
  */
 var GameBoardModel = function () {
 	// Constante de velocidad del reproductor
-	this.SPEED = 1800;
+	this.SPEED = 1000;
 	
 	// Define los estados del modelo
 	this.states = {
@@ -48,7 +48,7 @@ var GameBoardModel = function () {
 		var event = _this._curEvent + 1;
 		_this.setEvent(event);
 		
-		if (event >= _this._events.length)
+		if (event >= _this._events.length - 1)
 			_this.setState(_this.states.PAUSED);
 	};
 	
@@ -155,7 +155,7 @@ GameBoardModel.prototype = {
 			
 			switch(this._state) {
 				case this.states.PLAYING:
-					if (this._curEvent >= this._events.length)
+					if (this._curEvent >= this._events.length - 1)
 						this._curEvent = 0;
 
 					this._timer.start();					
@@ -181,7 +181,7 @@ GameBoardModel.prototype = {
 	},
 	
 	setEvent: function(num) {
-		if (this._curEvent != num && (num >= 0 && num <= this._events.length)) {
+		if (this._curEvent != num && (num >= 0 && num < this._events.length)) {
 			this._curEvent = num;
 			this.update.notify();
 		}		
