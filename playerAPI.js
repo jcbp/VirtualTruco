@@ -150,8 +150,17 @@ var NSDeck = new function () {
 	 * Define lo que es una carta, a partir del valor y el palo
 	 */
 	var Card = function (value, suit) {
+		var _played = false;
+
 		this.value = value;
 		this.suit = suit;
+		
+		this.setAsPlayed = function() {
+			_played = true;
+		}
+		this.wasPlayed = function() {
+			return _played;
+		}
 	};
 	Card.prototype.toString = function () {
 		this.toString = function () {
@@ -404,7 +413,7 @@ var CommonAPI = new function () {
 		/*
 		 * Retorna el envido de dos cartas
 		 */
-		var calculatePartialEnvido = this.calculatePartialEnvido = function (firstCard, secondCard) {
+		var calculatePartialEnvido = function (firstCard, secondCard) {
 			var envido;
 			if(firstCard.suit == secondCard.suit) {
 				envido = 20 + getEnvidoValue(firstCard) + getEnvidoValue(secondCard);
@@ -414,6 +423,7 @@ var CommonAPI = new function () {
 			}
 			return envido;
 		}
+		this.calculatePartialEnvido = calculatePartialEnvido;
 		
 		/*
 		 * Retorna el envido mas alto posible evaluando todas las cartas de la mano
@@ -440,8 +450,20 @@ var CommonAPI = new function () {
 			return orderedCards;
 		}
 		
-		this.getCards = function () {
-			return cards;
+		this.each = function (callback) {
+			for(var i=0; i<cards.length; i++) {
+				if(cards.hasOwnProperty(i) && callback) {
+					callback(i, cards[i].value, cards[i].suit);
+				}
+			}
+		};
+		
+		this.getCount = function() {
+			return cards.length;
+		};
+		
+		this.pullCard = function(index) {
+			return cards.splice(index, 1)[0];
 		};
 	}
 	
