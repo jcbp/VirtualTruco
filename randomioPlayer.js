@@ -7,6 +7,7 @@ var RandomPlayer = function (name) {
 
 	var _cardSet = [];
 	var _utils = new Utils();
+	var _cardIndex = 3;
 
 	var getRandomOption = function (opts) {
 		return opts[_utils.random(0, opts.length-1)];
@@ -15,7 +16,8 @@ var RandomPlayer = function (name) {
 	var getAction = function (randOption) {
 		var action;
 		if(randOption==CommonAPI.PLAY_CARD) {
-			action = new Server.Action(Server.ActionType.Card, _cardSet.getCards().pop());
+			_cardIndex--;
+			action = new Server.Action(Server.ActionType.Card, _cardSet.pullCard(_cardIndex));
 		}
 		else {
 			action = new Server.Action(Server.ActionType.Message, Server.Messages[randOption]);
