@@ -1,15 +1,15 @@
 
-/*
+/**
  * @Namespace
  */
 var Server = new function () {
 
-	/*
+	/**
 	 * Tanto el servidor como los jugadores tienen su propia instancia de Utils
 	 */
 	var _utils = new Utils();
 	
-	/*
+	/**
 	 * Mensaje
 	 */
 	var Message = function(name, type) {
@@ -17,7 +17,7 @@ var Server = new function () {
 		this.type = type;
 	};
 	
-	/*
+	/**
 	 * Tipos de mensaje
 	 */
 	var MessageType = this.MessageType = {
@@ -26,7 +26,7 @@ var Server = new function () {
 		Reply: "Reply"
 	};
 	
-	/*
+	/**
 	 * Enumeración de mensajes
 	 */
 	var Messages = this.Messages = {
@@ -40,7 +40,7 @@ var Server = new function () {
 		NoQuiero: new Message("NoQuiero", MessageType.Reply)
 	};
 	
-	/*
+	/**
 	 * Tipos de acciones...
 	 */
 	var ActionType = this.ActionType = {
@@ -48,7 +48,7 @@ var Server = new function () {
 		Card: "Card"
 	}
 	
-	/*
+	/**
 	 * Este objeto es el que se espera que envie cada jugador para interactuar
 	 */
 	var Action = this.Action = function (type, argument) {
@@ -57,7 +57,7 @@ var Server = new function () {
 		this.card = type==ActionType.Card? argument: null;
 	}
 	
-	/*
+	/**
 	 * Tipos de respuestas...
 	 */
 	var ReplyType = {
@@ -68,7 +68,7 @@ var Server = new function () {
 		FaltaEnvidoQuerido: "FaltaEnvidoQuerido"
 	};
 	
-	/*
+	/**
 	 * Representa una collecion de nodos (dentro del arbol del flujo del juego)
 	 * Se accede a sus nodos a través del metodo each
 	 */
@@ -106,7 +106,7 @@ var Server = new function () {
 		}
 	}
 
-	/*
+	/**
 	 * Clase Base que representa un nodo del flujo del juego
 	 * Todos los nodos heredan de esta clase
 	 */
@@ -167,7 +167,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Define una respuesta de apuesta correspondiente a la primer parte (Quiero, NoQuiero)
 	 */
 	var FirstSectionReplyNode = function (value, playCardBranch, trucoBranch) {
@@ -184,7 +184,7 @@ var Server = new function () {
 		});
 	}
 	
-	/*
+	/**
 	 * Define una respuesta de apuesta correspondiente a la segunda parte (Quiero, NoQuiero)
 	 */
 	var SecondSectionReplyNode = function (value, playCardBranch, trucoBranch) {
@@ -196,7 +196,7 @@ var Server = new function () {
 		this.addBranch(trucoBranch);
 	}
 	
-	/*
+	/**
 	 * Concrete Quiero (First Section)
 	 */
 	var FirstSectionQuieroNode = function (value, playCardBranch, trucoBranch) {
@@ -204,7 +204,7 @@ var Server = new function () {
 		this.type = this.name = ReplyType.FirstSectionQuiero;
 	}
 	
-	/*
+	/**
 	 * Concrete NoQuiero (First Section)
 	 */
 	var FirstSectionNoQuieroNode = function (value, playCardBranch, trucoBranch) {
@@ -212,7 +212,7 @@ var Server = new function () {
 		this.type = this.name = ReplyType.FirstSectionNoQuiero;
 	}
 	
-	/*
+	/**
 	 * Concrete Quiero para el Falta Envido (First Section)
 	 */
 	var FaltaEnvidoQueridoNode = function (value, playCardBranch, trucoBranch) {
@@ -221,7 +221,7 @@ var Server = new function () {
 		this.name = ReplyType.FaltaEnvidoQuerido;
 	}
 	
-	/*
+	/**
 	 * Concrete Quiero (Second Section)
 	 */
 	var SecondSectionQuieroNode = function (value, playCardBranch, trucoBranch) {
@@ -229,7 +229,7 @@ var Server = new function () {
 		this.type = this.name = ReplyType.SecondSectionQuiero;
 	}
 	
-	/*
+	/**
 	 * Concrete NoQuiero (Second Section)
 	 */
 	var SecondSectionNoQuieroNode = function (value, playCardBranch, trucoBranch) {
@@ -239,7 +239,7 @@ var Server = new function () {
 		this.value = value;
 	}
 	
-	/*
+	/**
 	 * Concrete Quiero (Second Section)
 	 */
 	var AltSecondSectionQuieroNode = function (value, playCardBranch, trucoBranch) {
@@ -251,7 +251,7 @@ var Server = new function () {
 		});
 	}
 	
-	/*
+	/**
 	 * Concrete NoQuiero (Second Section)
 	 */
 	var AltSecondSectionNoQuieroNode = function (value, playCardBranch, trucoBranch) {
@@ -265,7 +265,7 @@ var Server = new function () {
 		});
 	}
 	
-	/*
+	/**
 	 * Nodos de la primer parte del juego (envido)
 	 */
 	var FirstSectionChallengeNode = function (previousValue, playCardBranch, trucoBranch) {
@@ -284,7 +284,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Nodos de la segunda parte del juego (truco)
 	 */
 	var SecondSectionChallengeNode = function (previousValue, playCardBranch, trucoBranch) {
@@ -303,7 +303,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Concrete Node Envido
 	 */
 	var EnvidoNode = function (previousValue, playCardBranch, trucoBranch) {
@@ -327,7 +327,7 @@ var Server = new function () {
 		this.setAsEnumerable();
 	}
 	
-	/*
+	/**
 	 * Concrete Node RealEnvido
 	 */
 	var RealEnvidoNode = function (previousValue, playCardBranch, trucoBranch) {
@@ -346,7 +346,7 @@ var Server = new function () {
 		this.setAsEnumerable();
 	}
 	
-	/*
+	/**
 	 * Concrete Node FaltaEnvido
 	 */
 	var FaltaEnvidoNode = function (previousValue, playCardBranch, trucoBranch) {
@@ -368,7 +368,7 @@ var Server = new function () {
 		this.setAsEnumerable();
 	}
 	
-	/*
+	/**
 	 * Concrete Node Truco
 	 */
 	var TrucoNode = function (previousValue, playCardBranch, trucoBranch, envidoBranch) {
@@ -391,7 +391,7 @@ var Server = new function () {
 		this.addBranch(envidoBranch);
 	}
 	
-	/*
+	/**
 	 * Concrete Node ReTruco
 	 */
 	var ReTrucoNode = function (previousValue, playCardBranch, trucoBranch, envidoBranch) {
@@ -410,7 +410,7 @@ var Server = new function () {
 		this.setAsEnumerable();
 	}
 	
-	/*
+	/**
 	 * Concrete Node ValeCuatro
 	 */
 	var ValeCuatroNode = function (previousValue, playCardBranch, trucoBranch, envidoBranch) {
@@ -426,7 +426,7 @@ var Server = new function () {
 		this.setAsEnumerable();
 	}
 	
-	/*
+	/**
 	 * Concrete Node PlayCard
 	 */
 	var PlayCardNode = function (cardCount, trucoBranch, envidoBranch) {
@@ -449,7 +449,7 @@ var Server = new function () {
 		this.setAsEnumerable();
 	}
 
-	/*
+	/**
 	 * Concrete Node Root
 	 */
 	var RootNode = function (playCardBranch, trucoBranch, envidoBranch) {
@@ -473,7 +473,7 @@ var Server = new function () {
 		this.addNodes(trucoBranch.getNodes());
 	}
 
-	/*
+	/**
 	 * Representa una rama en el flujo del juego
 	 */
 	var Branch = function () {
@@ -501,7 +501,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Objeto que representa el puntaje obtenido en una apuesta
 	 */
 	var Score = function (playerManager, maxScore, initValue) {
@@ -540,7 +540,7 @@ var Server = new function () {
 		}
 	}
 
-	/*
+	/**
 	 * Se realiza el seguimiento de puntos de cada apuesta.
 	 * Los puntos no son asignados a ningun jugador, solo se va guardando hasta donde se levantó las apuestas
 	 */
@@ -650,7 +650,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Ejecuta las acciones realizadas por los jugadores
 	 */
 	var ActionRunner = function (playerManager, cardProcessor, envidoProcessor, pointTracker, handHistory) {
@@ -736,7 +736,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Procesamiento de apuestas de la primer sección (envido)
 	 */
 	var EnvidoProcessor = function (playerManager, pointTracker) {
@@ -798,7 +798,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Procesamiento del juego de cartas
 	 */
 	var CardPlayingProcessor = function (playerManager, pointTracker) {
@@ -870,7 +870,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	* Habilita o desabilita el envio de actiones para el jugador, dependiendo si tiene el turno o no
 	*/
 	var ActionSender = function (playerHandler, actionReceiver) {
@@ -888,7 +888,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Datos de estado del jugador
 	 */
 	var PlayerData = function (playerHandler, actionSender) {
@@ -959,7 +959,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Maneja los estados del jugador (PlayerData.state)
 	 * Centraliza el manejo de turnos
 	 */
@@ -1139,6 +1139,8 @@ var Server = new function () {
 			_gameHistory.addHand(_handHistory);
 			
 			dealCards();
+			
+			setTimeout(gameLoop, config.playRate);
 		}
 		
 		var isMaxScore = function (max) {
@@ -1172,6 +1174,7 @@ var Server = new function () {
 			else if(!currentHand) {
 				nextHand();
 			}
+			setTimeout(gameLoop, config.playRate);
 		}
 
 		var gameLoop = function () {
@@ -1196,9 +1199,9 @@ var Server = new function () {
 		init();
 		
 		// start
-		_interval = setInterval(gameLoop, config.playRate);
+		//_interval = setInterval(gameLoop, config.playRate);
 		
 	}
 }
-	
-new Server.GameManager(new Server.GameConfig("AI Truco Championship"), new RandomPlayer("Randomio"), new RandomPlayer("Randamia"));
+
+new Server.GameManager(new Server.GameConfig("AI Truco Championship"), new RandomPlayer("Randomio"), new WhiteHorse());
