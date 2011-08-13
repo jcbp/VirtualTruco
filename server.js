@@ -844,6 +844,11 @@ var Server = new function () {
 		}
 		
 		this.playCard = function (player, card) {
+			if(card.wasPlayed()) {
+				throw new Error("Carta Jugada 2 veces");
+			}
+			card.setAsPlayed();
+			
 			player.trucoCycle.currentCard = card;
 			
 			if(_lastPlayer && (playerManager.getOpponent(_lastPlayer) != player)) {
