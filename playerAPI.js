@@ -568,7 +568,7 @@ var CommonAPI = new function () {
 		var getActions = function(mine,actionProp){
 			var action;
 			var temp 	= [];
-			var actions = this.getLastActions();
+			var actions = _this.getLastActions();
 			for(var prop in actions){
 				if(actions.hasOwnProperty(prop)){
 					action = actions[prop].action;					
