@@ -760,7 +760,7 @@ var Server = new function () {
 					player.handler.fireEvent("cardPointsPosted", {cardPoints: -1, areGood: true});
 				}
 				else {
-					player.handler.fireEvent("cardPointsPosted", {cardPoints: loserScore});
+					player.handler.fireEvent("cardPointsPosted", {cardPoints: loserScore, areGood: false});
 				}
 				playerManager.getOpponent(player).handler.fireEvent("cardPointsPosted", {cardPoints: winnerScore});
 			}
@@ -1069,7 +1069,7 @@ var Server = new function () {
 	this.GameConfig = function (name) {
 		this.name = name;
 		this.playRate = 500;
-		this.maxScore = 30;
+		this.maxScore = 300;
 	}
 	
 	this.GameManager = function (config, playerHandler1, playerHandler2) {
@@ -1209,4 +1209,4 @@ var Server = new function () {
 	}
 }
 
-new Server.GameManager(new Server.GameConfig("AI Truco Championship"), new RandomPlayer("Randomio"), new WhiteHorse());
+new Server.GameManager(new Server.GameConfig("AI Truco Championship"), new RandomPlayer("Randomio"), new RandomPlayer("Randamia"));

@@ -1,3 +1,4 @@
+
 var HTTPLoader = function(url, method, scope, func){
 	var _utils =  new Utils();
 	var _url = url;
@@ -83,11 +84,10 @@ var Log = new function () {
 
 /*
  * Utils
+ * @class
  */
 var Utils = function () {
-	
-	
-	
+
 	this.getLastElement = function (elements) {
 		return elements[elements.length - 1];
 	}
@@ -139,14 +139,14 @@ var Utils = function () {
 	}
 }
 
-/*
+/**
  * @Namespace
  */
 var NSDeck = new function () {
 	
 	var _utils = new Utils();
 	
-	/*
+	/**
 	 * Define lo que es una carta, a partir del valor y el palo
 	 */
 	var Card = function (value, suit) {
@@ -154,7 +154,7 @@ var NSDeck = new function () {
 
 		this.value = value;
 		this.suit = suit;
-		
+
 		this.setAsPlayed = function() {
 			_played = true;
 		}
@@ -168,7 +168,7 @@ var NSDeck = new function () {
 		}
 	}
 
-	/*
+	/**
 	 * Mezclador de cartas
 	 */
 	this.DeckShuffler = function () {
@@ -181,7 +181,7 @@ var NSDeck = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Maso de cartas
 	 */
 	var Deck = this.Deck = function (values, suits, shuffler) {
@@ -207,7 +207,7 @@ var NSDeck = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Se define el mazo de cartas españolas
 	 */
 	this.SpanishDeck = function (shuffler) {
@@ -218,7 +218,7 @@ var NSDeck = new function () {
 }
 
 
-/*
+/**
  * API
  */
 var CommonAPI = new function () {
@@ -311,7 +311,7 @@ var CommonAPI = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Se define el peso de las cartas	
 	 */
 	var CardsWeight = {
@@ -365,7 +365,7 @@ var CommonAPI = new function () {
 		}
 	};
 	
-	/*
+	/**
 	 * Se definen las enumeraciones de los posibles resultados de comparar el peso de dos cartas
 	 */
 	var CompareWeightType = this.CompareWeightType = {
@@ -374,19 +374,21 @@ var CommonAPI = new function () {
 		Higher: 1
 	};
 	
-	/*
+	/**
 	 * Operaciones sobre cartas individuales
 	 */
 	var CardProcessor = this.CardProcessor = function () {
 
-		/*
+		/**
 		 * Retorna el peso de la carta
 		 */
-		var getCardWeight = this.getCardWeight = function (card) {
+		var getCardWeight = function (card) {
 			return CardsWeight[card.suit] && CardsWeight[card.suit][card.value];
 		}
 		
-		/*
+		this.getCardWeight = getCardWeight;
+		
+		/**
 		 * Retorna si la primer carta es mayor, menor o igual que la segunda
 		 */
 		this.compareWeight = function (firstCard, secondCard) {
@@ -396,21 +398,31 @@ var CommonAPI = new function () {
 		}
 	};
 	
-	/*
+	/**
 	 * Operaciones sobre un set de cartas (3)
 	 */
 	var CardSet = this.CardSet = function (cards) {
 		
-		var _processor = new CardProcessor();
-		
 		/*
+		 * cards: array de cartas sobrantes
+		 * _envidoCards: total de cartas propias (3). Esto por si se necesita calcular el envido cuando ya se jugó una carta
+		 */
+		
+		var _utils = new Utils();
+		var _processor = new CardProcessor();
+		var _card1 = cards[0];
+		var _card2 = cards[1];
+		var _card3 = cards[2];
+		var _envidoCards = _utils.copyArray(cards);
+		
+		/**
 		 * Retorna el valor del envido de una carta
 		 */
 		var getEnvidoValue = function (card) {
 			return card.value <= 7 ? card.value : 0;
-		}
+		};
 
-		/*
+		/**
 		 * Retorna el envido de dos cartas
 		 */
 		var calculatePartialEnvido = function (firstCard, secondCard) {
@@ -422,24 +434,24 @@ var CommonAPI = new function () {
 				envido = Math.max(getEnvidoValue(firstCard), getEnvidoValue(secondCard));
 			}
 			return envido;
-		}
+		};
 		this.calculatePartialEnvido = calculatePartialEnvido;
 		
-		/*
+		/**
 		 * Retorna el envido mas alto posible evaluando todas las cartas de la mano
 		 */
 		this.calculateEnvido = function() {
 			var envido = 0;
 			var i, j;
-			for(i = 0; i < cards.length; i++) {
-				for(j = i+1; j < cards.length; j++) {
-					envido = Math.max(envido, calculatePartialEnvido(cards[i], cards[j]));
+			for(i = 0; i < _envidoCards.length; i++) {
+				for(j = i+1; j < _envidoCards.length; j++) {
+					envido = Math.max(envido, calculatePartialEnvido(_envidoCards[i], _envidoCards[j]));
 				}
 			}
 			return envido;
-		}
+		};
 		
-		/*
+		/**
 		 * Retorna las cartas ordenadas por peso en orden ascendente
 		 */
 		this.getWinnerCards = function () {
@@ -448,30 +460,79 @@ var CommonAPI = new function () {
 				return _processor.getCardWeight(firstCard) - _processor.getCardWeight(secondCard);
 			});
 			return orderedCards;
-		}
-		
-		this.each = function (callback) {
-			for(var i=0; i<cards.length; i++) {
-				if(cards.hasOwnProperty(i) && callback) {
-					callback(i, cards[i].value, cards[i].suit);
-				}
-			}
 		};
 		
+		this.getLowestCardKiller = function (card) {
+			var orderedCards = this.getWinnerCards();
+			var nextCard;
+			while(nextCard = orderedCards.pop()) {
+				if(_processor.compareWeight(nextCard, card) == CompareWeightType.Higher) {
+					break;
+				}
+			};
+			return nextCard || null;
+		};
+		
+		
+		/**
+		 * Devuelve la carta "uno" del set de cartas
+		 * Aunque se remuevan cartas, la carta sigue siendo la misma. No cambian los indices 
+		 */
+		this.getCard1 = function () {
+			return _card1;
+		};
+		
+		/**
+		 * Devuelve la carta "dos" del set de cartas
+		 * Aunque se remuevan cartas, la carta sigue siendo la misma. No cambian los indices 
+		 */
+		this.getCard2 = function () {
+			return _card2;
+		};
+		
+		/**
+		 * Devuelve la carta "tres" del set de cartas
+		 * Aunque se remuevan cartas, la carta sigue siendo la misma. No cambian los indices 
+		 */
+		this.getCard3 = function () {
+			return _card3;
+		};
+		
+		/**
+		 * Devuelve la carta siguiente. Se actualiza a medida que se van removiendo cartas del set
+		 * Ver pullCard
+		 */
+		this.getNextCard = function () {
+			return cards.shift();
+		}
+		
+		/**
+		 * Devuelve la cantidad de cartas que quedan en el set
+		 */
 		this.getCount = function() {
 			return cards.length;
 		};
 		
-		this.pullCard = function(index) {
-			return cards.splice(index, 1)[0];
+		/**
+		 * Remueve la carta del set de cartas
+		 * @param {Number} id Id de la carta. Puede valer 1, 2 o 3
+		 */
+		this.pullCard = function(card) {
+			for(var i=0; i < cards.length; i++) {
+				if(cards[i]==card) {
+					cards.splice(i, 1);
+					break;
+				}
+			};
 		};
 	}
 	
-	/*
+	/**
 	 * Clase base de la cual se tiene que heredar para armar un jugador
 	 */
 	this.AbstractPlayer = function () {
-
+		
+		var _this = this;
 		var _cardSet = [];
 		var _utils = new Utils();
 		var _event = new _utils.EventManager();
@@ -503,7 +564,7 @@ var CommonAPI = new function () {
 		this.addEventListener = _event.add;
 		
 		this.getLastActions = function () {
-			return _globalData.actionStack;
+			return _utils.copyArray(_globalData.actionStack);
 		}
 		
 		this.getOpponentScore = function () {
