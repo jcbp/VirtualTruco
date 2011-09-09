@@ -1,15 +1,15 @@
 
-/*
+/**
  * @Namespace
  */
 var Server = new function () {
 
-	/*
+	/**
 	 * Tanto el servidor como los jugadores tienen su propia instancia de Utils
 	 */
 	var _utils = new Utils();
 	
-	/*
+	/**
 	 * Mensaje
 	 */
 	var Message = function(name, type) {
@@ -17,17 +17,16 @@ var Server = new function () {
 		this.type = type;
 	};
 	
-	/*
+	/**
 	 * Tipos de mensaje
 	 */
 	var MessageType = this.MessageType = {
 		FirstSectionChallenge: "FirstSectionChallenge",
 		SecondSectionChallenge: "SecondSectionChallenge",
-		Reply: "Reply",
-		Surrender: "Surrender"
+		Reply: "Reply"
 	};
 	
-	/*
+	/**
 	 * Enumeración de mensajes
 	 */
 	var Messages = this.Messages = {
@@ -38,11 +37,10 @@ var Server = new function () {
 		ReTruco: new Message("ReTruco", MessageType.SecondSectionChallenge),
 		ValeCuatro: new Message("ValeCuatro", MessageType.SecondSectionChallenge),
 		Quiero: new Message("Quiero", MessageType.Reply),
-		NoQuiero: new Message("NoQuiero", MessageType.Reply),
-		SonBuenas: new Message("SonBuenas", MessageType.Surrender)
+		NoQuiero: new Message("NoQuiero", MessageType.Reply)
 	};
 	
-	/*
+	/**
 	 * Tipos de acciones...
 	 */
 	var ActionType = this.ActionType = {
@@ -50,7 +48,7 @@ var Server = new function () {
 		Card: "Card"
 	}
 	
-	/*
+	/**
 	 * Este objeto es el que se espera que envie cada jugador para interactuar
 	 */
 	var Action = this.Action = function (type, argument) {
@@ -59,7 +57,7 @@ var Server = new function () {
 		this.card = type==ActionType.Card? argument: null;
 	}
 	
-	/*
+	/**
 	 * Tipos de respuestas...
 	 */
 	var ReplyType = {
@@ -70,7 +68,7 @@ var Server = new function () {
 		FaltaEnvidoQuerido: "FaltaEnvidoQuerido"
 	};
 	
-	/*
+	/**
 	 * Representa una collecion de nodos (dentro del arbol del flujo del juego)
 	 * Se accede a sus nodos a través del metodo each
 	 */
@@ -90,9 +88,15 @@ var Server = new function () {
 		this.isEmpty = function () {
 			return _isEmpty;
 		}
+		
 		this.select = function (nodeName) {
 			return _nodes[nodeName];
 		}
+		
+		this.contains = function (nodeName) {
+			return _nodes.hasOwnProperty(nodeName);
+		};
+		
 		this.each = function (callback) {
 			for(var nodeName in _nodes) {
 				if(_nodes.hasOwnProperty(nodeName)) {
@@ -102,7 +106,7 @@ var Server = new function () {
 		}
 	}
 
-	/*
+	/**
 	 * Clase Base que representa un nodo del flujo del juego
 	 * Todos los nodos heredan de esta clase
 	 */
@@ -163,43 +167,69 @@ var Server = new function () {
 		}
 	}
 	
-	/*
-	 * Define una respuesta de apuesta (Quiero, NoQuiero)
+	/**
+	 * Define una respuesta de apuesta correspondiente a la primer parte (Quiero, NoQuiero)
 	 */
-	var ReplyNode = function (value, playCardBranch, trucoBranch) {
+	var FirstSectionReplyNode = function (value, playCardBranch, trucoBranch) {
 		BaseNode.apply(this, arguments);
-		this.name = "Reply";
+		this.name = "FirstSectionReply";
 		this.value = value;
 		
 		this.addBranch(playCardBranch);
 		this.addBranch(trucoBranch);
+		
+		this.addNodes({
+			Quiero: new AltSecondSectionQuieroNode(trucoBranch.getNodes()["Truco"].intrinsicValue, playCardBranch, trucoBranch),
+			NoQuiero: new AltSecondSectionNoQuieroNode(trucoBranch.getNodes()["Truco"].declinedValue, playCardBranch, trucoBranch)
+		});
 	}
 	
-	/*
+	/**
+	 * Define una respuesta de apuesta correspondiente a la segunda parte (Quiero, NoQuiero)
+	 */
+	var SecondSectionReplyNode = function (value, playCardBranch, trucoBranch) {
+		BaseNode.apply(this, arguments);
+		this.name = "SecondSectionReply";
+		this.value = value;
+
+		this.addBranch(playCardBranch);
+		this.addBranch(trucoBranch);
+	}
+	
+	/**
 	 * Concrete Quiero (First Section)
 	 */
 	var FirstSectionQuieroNode = function (value, playCardBranch, trucoBranch) {
-		ReplyNode.apply(this, arguments);
+		FirstSectionReplyNode.apply(this, arguments);
 		this.type = this.name = ReplyType.FirstSectionQuiero;
 	}
 	
-	/*
+	/**
 	 * Concrete NoQuiero (First Section)
 	 */
 	var FirstSectionNoQuieroNode = function (value, playCardBranch, trucoBranch) {
-		ReplyNode.apply(this, arguments);
+		FirstSectionReplyNode.apply(this, arguments);
 		this.type = this.name = ReplyType.FirstSectionNoQuiero;
 	}
 	
-	/*
+	/**
+	 * Concrete Quiero para el Falta Envido (First Section)
+	 */
+	var FaltaEnvidoQueridoNode = function (value, playCardBranch, trucoBranch) {
+		FirstSectionReplyNode.apply(this, arguments);
+		this.type = ReplyType.FaltaEnvidoQuerido;
+		this.name = ReplyType.FaltaEnvidoQuerido;
+	}
+	
+	/**
 	 * Concrete Quiero (Second Section)
 	 */
 	var SecondSectionQuieroNode = function (value, playCardBranch, trucoBranch) {
-		ReplyNode.apply(this, arguments);
+		SecondSectionReplyNode.apply(this, arguments);
 		this.type = this.name = ReplyType.SecondSectionQuiero;
 	}
 	
-	/*
+	/**
 	 * Concrete NoQuiero (Second Section)
 	 */
 	var SecondSectionNoQuieroNode = function (value, playCardBranch, trucoBranch) {
@@ -209,7 +239,33 @@ var Server = new function () {
 		this.value = value;
 	}
 	
-	/*
+	/**
+	 * Concrete Quiero (Second Section)
+	 */
+	var AltSecondSectionQuieroNode = function (value, playCardBranch, trucoBranch) {
+		SecondSectionReplyNode.apply(this, arguments);
+		this.type = this.name = ReplyType.SecondSectionQuiero;
+		
+		this.requires(function(state) {
+			return !!state.trucoFollowedEnvido;
+		});
+	}
+	
+	/**
+	 * Concrete NoQuiero (Second Section)
+	 */
+	var AltSecondSectionNoQuieroNode = function (value, playCardBranch, trucoBranch) {
+		// end hand: empty node
+		BaseNode.apply(this, arguments);
+		this.type = this.name = ReplyType.SecondSectionNoQuiero;
+		this.value = value;
+		
+		this.requires(function(state) {
+			return !!state.trucoFollowedEnvido;
+		});
+	}
+	
+	/**
 	 * Nodos de la primer parte del juego (envido)
 	 */
 	var FirstSectionChallengeNode = function (previousValue, playCardBranch, trucoBranch) {
@@ -228,7 +284,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Nodos de la segunda parte del juego (truco)
 	 */
 	var SecondSectionChallengeNode = function (previousValue, playCardBranch, trucoBranch) {
@@ -247,7 +303,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Concrete Node Envido
 	 */
 	var EnvidoNode = function (previousValue, playCardBranch, trucoBranch) {
@@ -271,7 +327,7 @@ var Server = new function () {
 		this.setAsEnumerable();
 	}
 	
-	/*
+	/**
 	 * Concrete Node RealEnvido
 	 */
 	var RealEnvidoNode = function (previousValue, playCardBranch, trucoBranch) {
@@ -290,13 +346,7 @@ var Server = new function () {
 		this.setAsEnumerable();
 	}
 	
-	var FaltaEnvidoQueridoNode = function (value, playCardBranch, trucoBranch) {
-		ReplyNode.apply(this, arguments);
-		this.type = ReplyType.FaltaEnvidoQuerido;
-		this.name = ReplyType.FaltaEnvidoQuerido;
-	}
-	
-	/*
+	/**
 	 * Concrete Node FaltaEnvido
 	 */
 	var FaltaEnvidoNode = function (previousValue, playCardBranch, trucoBranch) {
@@ -318,7 +368,7 @@ var Server = new function () {
 		this.setAsEnumerable();
 	}
 	
-	/*
+	/**
 	 * Concrete Node Truco
 	 */
 	var TrucoNode = function (previousValue, playCardBranch, trucoBranch, envidoBranch) {
@@ -329,6 +379,9 @@ var Server = new function () {
 		var _acceptedValue = previousValue + _intrinsicValue;
 		var _declinedValue = previousValue || 1;
 		
+		this.intrinsicValue = _intrinsicValue;
+		this.declinedValue = _declinedValue;
+		
 		this.setValues(_acceptedValue, _declinedValue);
 		
 		this.addNodes({
@@ -338,7 +391,7 @@ var Server = new function () {
 		this.addBranch(envidoBranch);
 	}
 	
-	/*
+	/**
 	 * Concrete Node ReTruco
 	 */
 	var ReTrucoNode = function (previousValue, playCardBranch, trucoBranch, envidoBranch) {
@@ -357,7 +410,7 @@ var Server = new function () {
 		this.setAsEnumerable();
 	}
 	
-	/*
+	/**
 	 * Concrete Node ValeCuatro
 	 */
 	var ValeCuatroNode = function (previousValue, playCardBranch, trucoBranch, envidoBranch) {
@@ -373,12 +426,16 @@ var Server = new function () {
 		this.setAsEnumerable();
 	}
 	
-	/*
+	/**
 	 * Concrete Node PlayCard
 	 */
 	var PlayCardNode = function (cardCount, trucoBranch, envidoBranch) {
 		BaseNode.apply(this, arguments);
 		this.name = "PlayCard";
+		
+		this.requires(function(state) {
+			return !state.trucoFollowedEnvido;
+		});
 
 		// Se crea la cantidad de nodos como de cartas haya: se juegan 6 cartas (3 + 3)
 		if(cardCount > 0) {
@@ -392,7 +449,7 @@ var Server = new function () {
 		this.setAsEnumerable();
 	}
 
-	/*
+	/**
 	 * Concrete Node Root
 	 */
 	var RootNode = function (playCardBranch, trucoBranch, envidoBranch) {
@@ -416,7 +473,7 @@ var Server = new function () {
 		this.addNodes(trucoBranch.getNodes());
 	}
 
-	/*
+	/**
 	 * Representa una rama en el flujo del juego
 	 */
 	var Branch = function () {
@@ -444,7 +501,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Objeto que representa el puntaje obtenido en una apuesta
 	 */
 	var Score = function (playerManager, maxScore, initValue) {
@@ -483,7 +540,7 @@ var Server = new function () {
 		}
 	}
 
-	/*
+	/**
 	 * Se realiza el seguimiento de puntos de cada apuesta.
 	 * Los puntos no son asignados a ningun jugador, solo se va guardando hasta donde se levantó las apuestas
 	 */
@@ -593,7 +650,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Ejecuta las acciones realizadas por los jugadores
 	 */
 	var ActionRunner = function (playerManager, cardProcessor, envidoProcessor, pointTracker, handHistory) {
@@ -601,14 +658,18 @@ var Server = new function () {
 		var _trucoBranch = new Branch();
 		var _envidoBranch = new Branch();
 		var _currentNode = new RootNode(_playCardBranch, _trucoBranch, _envidoBranch);
+		var _secondSectionBet = false;
 		var _childNodes;
 		var _currentPlayer;
 		
 		this.execute = function(action) {
+
 			playerManager.closeFirstSection(_currentPlayer);
+
 			if(!_childNodes) {
 				throw new Error("setNextPlayer must be call before the execute method");
 			}
+			
 			switch(action.type) {
 				case ActionType.Message:
 					_currentNode = _childNodes.select(action.message.name);
@@ -617,9 +678,14 @@ var Server = new function () {
 						if(action.message.type==MessageType.SecondSectionChallenge) {
 							_trucoBranch.setNodes(_currentNode.getNodes());
 							playerManager.setupQuiero(_currentPlayer);
+							_secondSectionBet = true;
 						}
 						else if(action.message.type==MessageType.FirstSectionChallenge) {
 							playerManager.openFirstSection(_currentPlayer);
+							if(_secondSectionBet) {
+								_secondSectionBet = false;
+								playerManager.activeTrucoFollowedEnvido();
+							}
 						}
 						else if(action.message.type==MessageType.Reply) {
 							envidoProcessor.playEnvido(_currentPlayer, _currentNode);
@@ -629,7 +695,13 @@ var Server = new function () {
 							playerManager.setNextPlayer(cardProcessor.getNextPlayer());
 						}
 						else {
-							playerManager.switchPlayer();
+							if(action.message.type==MessageType.Reply && _currentNode.getChildNodes(_currentPlayer.state).select("Quiero")) {
+								// truco envidado
+								playerManager.setNextPlayer(playerManager.getNoHandPlayer());
+							}
+							else {
+								playerManager.switchPlayer();
+							}
 						}
 						// **** DEJAR DE ESTAR ATENTO
 					}
@@ -644,6 +716,11 @@ var Server = new function () {
 					playerManager.setNextPlayer(cardProcessor.getNextPlayer());
 					break;
 			}
+
+			if(_currentNode && (_currentNode.name==ReplyType.SecondSectionQuiero || _currentNode.name==ReplyType.SecondSectionNoQuiero)) {
+				playerManager.deactiveTrucoFollowedEnvido();
+			}
+
 			handHistory.addAction(_currentPlayer, action);
 			return _currentNode;
 		}
@@ -659,21 +736,34 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Procesamiento de apuestas de la primer sección (envido)
 	 */
 	var EnvidoProcessor = function (playerManager, pointTracker) {
 		
-		var setWinner = function (player) {
+		var setWinner = function (player, accepted, winnerScore, loserScore) {
 			
+			// ------------------------------ LOG ----------------------------
 			var log={};
 			log["Tanto de " + player.handler.getName()] = (new CommonAPI.CardSet(player.cards)).calculateEnvido();
 			var opponent = playerManager.getOpponent(player);
 			log["Tanto de " + opponent.handler.getName()] = (new CommonAPI.CardSet(opponent.cards)).calculateEnvido();
 			Log.add(log);
 			Log.add({"Gano el tanto": player.handler.getName()});
+			// ---------------------------------------------------------------
 			
 			player.pointsEarned += pointTracker.getFirstSectionPoints().getValue(player);
+			
+			if(accepted) {
+				if(player.isHand) {
+					// son buenas
+					player.handler.fireEvent("cardPointsPosted", {cardPoints: -1, areGood: true});
+				}
+				else {
+					player.handler.fireEvent("cardPointsPosted", {cardPoints: loserScore, areGood: false});
+				}
+				playerManager.getOpponent(player).handler.fireEvent("cardPointsPosted", {cardPoints: winnerScore});
+			}
 			
 			player.handler.fireEvent("ownScoreChange", {score: player.pointsEarned});
 			playerManager.getOpponent(player).handler.fireEvent("opponentScoreChange", {score: player.pointsEarned});
@@ -685,15 +775,16 @@ var Server = new function () {
 			var opponentCardSet = new CommonAPI.CardSet(opponent.cards);
 			var playerScore = playerCardSet.calculateEnvido();
 			var opponentScore = opponentCardSet.calculateEnvido();
+			var playerHand = playerManager.getHandPlayer();
 			
 			if(playerScore > opponentScore) {
-				setWinner(player);
+				setWinner(player, true, playerScore, opponentScore);
 			}
 			else if(playerScore < opponentScore) {
-				setWinner(opponent);
+				setWinner(opponent, true, opponentScore, playerScore);
 			}
 			else {
-				setWinner(playerManager.getHandPlayer());
+				setWinner(playerHand, true, playerScore, playerScore);
 			}
 		}
 		
@@ -702,12 +793,12 @@ var Server = new function () {
 				evalEnvido(player);
 			}
 			else if(node.type == ReplyType.FirstSectionNoQuiero) {
-				setWinner(playerManager.getOpponent(player));
+				setWinner(playerManager.getOpponent(player), false);
 			}
 		}
 	}
 	
-	/*
+	/**
 	 * Procesamiento del juego de cartas
 	 */
 	var CardPlayingProcessor = function (playerManager, pointTracker) {
@@ -753,6 +844,11 @@ var Server = new function () {
 		}
 		
 		this.playCard = function (player, card) {
+			if(card.wasPlayed()) {
+				throw new Error("Carta Jugada 2 veces");
+			}
+			card.setAsPlayed();
+			
 			player.trucoCycle.currentCard = card;
 			
 			if(_lastPlayer && (playerManager.getOpponent(_lastPlayer) != player)) {
@@ -779,7 +875,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	* Habilita o desabilita el envio de actiones para el jugador, dependiendo si tiene el turno o no
 	*/
 	var ActionSender = function (playerHandler, actionReceiver) {
@@ -797,7 +893,7 @@ var Server = new function () {
 		}
 	}
 	
-	/*
+	/**
 	 * Datos de estado del jugador
 	 */
 	var PlayerData = function (playerHandler, actionSender) {
@@ -828,7 +924,8 @@ var Server = new function () {
 		 */
 		this.state = {
 			hasQuiero: true,
-			firstSectionIsOpen: true
+			firstSectionIsOpen: true,
+			trucoFollowedEnvido: false
 		}
 		
 		/*
@@ -860,13 +957,14 @@ var Server = new function () {
 			};
 			this.state = {
 				hasQuiero: true,
-				firstSectionIsOpen: true
+				firstSectionIsOpen: true,
+				trucoFollowedEnvido: false
 			};
 			this.cards = [];
 		}
 	}
 	
-	/*
+	/**
 	 * Maneja los estados del jugador (PlayerData.state)
 	 * Centraliza el manejo de turnos
 	 */
@@ -913,6 +1011,10 @@ var Server = new function () {
 		
 		this.getOpponent = getOpponent;
 		
+		this.getNoHandPlayer = function () {
+			return getOpponent(getHandPlayer());
+		}
+		
 		this.switchPlayer = function () {
 			setCurrentPlayer(getOpponent(_currentPlayer));
 		}
@@ -930,6 +1032,16 @@ var Server = new function () {
 			player.state.firstSectionIsOpen = false;
 		}
 		
+		this.activeTrucoFollowedEnvido = function () {
+			player1.state.trucoFollowedEnvido = true;
+			player2.state.trucoFollowedEnvido = true;
+		}
+		
+		this.deactiveTrucoFollowedEnvido = function () {
+			player1.state.trucoFollowedEnvido = false;
+			player2.state.trucoFollowedEnvido = false;
+		}
+
 		this.openFirstSection = function (player) {
 			getOpponent(player).state.firstSectionIsOpen = true;
 		}
@@ -957,7 +1069,7 @@ var Server = new function () {
 	this.GameConfig = function (name) {
 		this.name = name;
 		this.playRate = 500;
-		this.maxScore = 30;
+		this.maxScore = 300;
 	}
 	
 	this.GameManager = function (config, playerHandler1, playerHandler2) {
@@ -977,8 +1089,8 @@ var Server = new function () {
 		var showLog = function () {
 			var log = {};
 			log["-----------------------"] = "------------------------------<br>";
-			log["--" + _player1.handler.getName()] = _player1.pointsEarned + (_player1.isHand? " (hand player)": "");
-			log["--" + _player2.handler.getName()] = _player2.pointsEarned + (_player2.isHand? " (hand player)": "");
+			log["--" + _player1.handler.getName()] = _player1.pointsEarned + (_player1.isHand? "": " (hand player)");
+			log["--" + _player2.handler.getName()] = _player2.pointsEarned + (_player2.isHand? "": " (hand player)");
 			Log.add(log);
 			Log.add({"-----------------------": "------------------------------<br>"});
 		}
@@ -1032,6 +1144,8 @@ var Server = new function () {
 			_gameHistory.addHand(_handHistory);
 			
 			dealCards();
+			
+			setTimeout(gameLoop, config.playRate);
 		}
 		
 		var isMaxScore = function (max) {
@@ -1065,6 +1179,7 @@ var Server = new function () {
 			else if(!currentHand) {
 				nextHand();
 			}
+			setTimeout(gameLoop, config.playRate);
 		}
 
 		var gameLoop = function () {
@@ -1089,9 +1204,9 @@ var Server = new function () {
 		init();
 		
 		// start
-		_interval = setInterval(gameLoop, config.playRate);
+		//_interval = setInterval(gameLoop, config.playRate);
 		
 	}
 }
-	
+
 new Server.GameManager(new Server.GameConfig("AI Truco Championship"), new RandomPlayer("Randomio"), new RandomPlayer("Randamia"));
